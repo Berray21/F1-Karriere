@@ -270,77 +270,42 @@ tab_tables, tab_matrix, tab_duel, tab_input, tab_market, tab_history = st.tabs(
     ]
 )
 
-# --- TAB 1: WM-STÄNDE OHNE SCROLLEN ---
+# --- TAB 1: WM-STÄNDE ---
 with tab_tables:
     col_drivers, col_constructors = st.columns([3, 2], gap="large")
 
     with col_drivers:
         st.subheader("Fahrerwertung")
-        html_drivers = """
-        <table class="f1-table">
-            <thead>
-                <tr>
-                    <th style="width: 40px;">#</th>
-                    <th>Fahrer</th>
-                    <th>Team</th>
-                    <th style="text-align: right;">Punkte</th>
-                    <th style="text-align: right;">Siege</th>
-                    <th style="text-align: right;">Podien</th>
-                    <th style="text-align: right;">FL</th>
-                    <th style="text-align: right;">DNF</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
+        drivers_rows = []
         for rank, d in enumerate(sorted_drivers, start=1):
             s = driver_stats[d]
-            cls = ""
-            if d == "Lucas":
-                cls = ' class="highlight-lucas"'
-            elif d == "Tim":
-                cls = ' class="highlight-tim"'
-
-            html_drivers += f"""
-                <tr>
-                    <td><b>{rank}</b></td>
-                    <td{cls}>{d}</td>
-                    <td style="color: #9aa5b5;">{s['Team']}</td>
-                    <td style="text-align: right; font-weight: bold;">{s['Punkte']}</td>
-                    <td style="text-align: right;">{s['Siege']}</td>
-                    <td style="text-align: right;">{s['Podien']}</td>
-                    <td style="text-align: right; color: #ba68c8;">{s['Fastest Laps']}</td>
-                    <td style="text-align: right; color: #e57373;">{s['DNFs']}</td>
-                </tr>
-            """
-        html_drivers += "</tbody></table>"
-        st.markdown(html_drivers, unsafe_allow_html=True)
+            drivers_rows.append(
+                {
+                    "#": rank,
+                    "Fahrer": f"🟢 {d}"
+                    if d == "Lucas"
+                    else (f"🟠 {d}" if d == "Tim" else d),
+                    "Team": s["Team"],
+                    "Punkte": s["Punkte"],
+                    "Siege": s["Siege"],
+                    "Podien": s["Podien"],
+                    "FL": s["Fastest Laps"],
+                    "DNF": s["DNFs"],
+                }
+            )
+        df_display_drivers = pd.DataFrame(drivers_rows).set_index("#")
+        st.table(df_display_drivers)
 
     with col_constructors:
         st.subheader("Konstrukteurswertung")
         sorted_teams = sorted(
             constructor_points.items(), key=lambda x: x[1], reverse=True
         )
-        html_teams = """
-        <table class="f1-table">
-            <thead>
-                <tr>
-                    <th style="width: 40px;">#</th>
-                    <th>Team</th>
-                    <th style="text-align: right;">Punkte</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
+        teams_rows = []
         for rank, (team, pts) in enumerate(sorted_teams, start=1):
-            html_teams += f"""
-                <tr>
-                    <td><b>{rank}</b></td>
-                    <td>{team}</td>
-                    <td style="text-align: right; font-weight: bold;">{pts}</td>
-                </tr>
-            """
-        html_teams += "</tbody></table>"
-        st.markdown(html_teams, unsafe_allow_html=True)
+            teams_rows.append({"#": rank, "Team": team, "Punkte": pts})
+        df_display_teams = pd.DataFrame(teams_rows).set_index("#")
+        st.table(df_display_teams)
 
 # --- TAB 2: RENNERGEBNISSE ---
 with tab_matrix:
