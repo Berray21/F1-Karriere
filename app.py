@@ -29,37 +29,6 @@ st.markdown(
             margin-bottom: 20px;
             text-align: center;
         }
-        .f1-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.92rem;
-            background-color: #12161f;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .f1-table th {
-            background-color: #1c222e;
-            color: #e10600;
-            text-align: left;
-            padding: 9px 12px;
-            font-weight: bold;
-            border-bottom: 2px solid #283040;
-        }
-        .f1-table td {
-            padding: 7px 12px;
-            border-bottom: 1px solid #1e2533;
-        }
-        .f1-table tr:hover {
-            background-color: #1a202c;
-        }
-        .highlight-lucas {
-            color: #00d2be;
-            font-weight: bold;
-        }
-        .highlight-tim {
-            color: #ff8700;
-            font-weight: bold;
-        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -67,6 +36,7 @@ st.markdown(
 
 POINTS_SYSTEM = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}
 
+# 11 Teams & 22 Fahrer (Cadillac mit Bottas & Pérez)
 OFFICIAL_GRID = {
     "Ferrari": ["Charles Leclerc", "Lewis Hamilton"],
     "McLaren": ["Lando Norris", "Oscar Piastri"],
@@ -78,7 +48,22 @@ OFFICIAL_GRID = {
     "RB": ["Yuki Tsunoda", "Isack Hadjar"],
     "Sauber / Audi": ["Nico Hülkenberg", "Gabriel Bortoleto"],
     "Haas": ["Esteban Ocon", "Oliver Bearman"],
-    "Cadillac": ["Fahrer 1", "Fahrer 2"],
+    "Cadillac": ["Valtteri Bottas", "Sergio Pérez"],
+}
+
+# Dezente, blasse Teamfarben für die Zeilen-Hinterlegung
+TEAM_TINTS = {
+    "Ferrari": "rgba(232, 0, 32, 0.18)",
+    "McLaren": "rgba(255, 128, 0, 0.18)",
+    "Red Bull": "rgba(54, 113, 198, 0.18)",
+    "Mercedes": "rgba(39, 244, 210, 0.18)",
+    "Aston Martin": "rgba(34, 153, 113, 0.18)",
+    "Williams": "rgba(100, 196, 255, 0.18)",
+    "Alpine": "rgba(0, 147, 204, 0.18)",
+    "RB": "rgba(102, 146, 255, 0.18)",
+    "Sauber / Audi": "rgba(82, 226, 82, 0.18)",
+    "Haas": "rgba(182, 186, 189, 0.18)",
+    "Cadillac": "rgba(218, 165, 32, 0.18)",
 }
 
 SEASON_2026_CALENDAR = [
@@ -270,7 +255,7 @@ tab_tables, tab_matrix, tab_duel, tab_input, tab_market, tab_history = st.tabs(
     ]
 )
 
-# --- TAB 1: WM-STÄNDE ---
+# --- TAB 1: WM-STÄNDE MIT DEZENTER ZEILENFARBE ---
 with tab_tables:
     col_drivers, col_constructors = st.columns([3, 2], gap="large")
 
@@ -282,9 +267,7 @@ with tab_tables:
             drivers_rows.append(
                 {
                     "#": rank,
-                    "Fahrer": f"🟢 {d}"
-                    if d == "Lucas"
-                    else (f"🟠 {d}" if d == "Tim" else d),
+                    "Fahrer": d,
                     "Team": s["Team"],
                     "Punkte": s["Punkte"],
                     "Siege": s["Siege"],
@@ -294,7 +277,22 @@ with tab_tables:
                 }
             )
         df_display_drivers = pd.DataFrame(drivers_rows).set_index("#")
-        st.table(df_display_drivers)
+
+        # Färbt die Zeile dezent in der jeweiligen Teamfarbe ein
+        def highlight_user_rows(row):
+            driver_name = row["Fahrer"]
+            if driver_name in ["Lucas", "Tim"]:
+                team = active_drivers.get(driver_name)
+                bg_color = TEAM_TINTS.get(team, "rgba(255, 255, 255, 0.12)")
+                return [
+                    f"background-color: {bg_color}; font-weight: bold;"
+                ] * len(row)
+            return [""] * len(row)
+
+        styled_drivers = df_display_drivers.style.apply(
+            highlight_user_rows, axis=1
+        )
+        st.table(styled_drivers)
 
     with col_constructors:
         st.subheader("Konstrukteurswertung")
@@ -305,7 +303,25 @@ with tab_tables:
         for rank, (team, pts) in enumerate(sorted_teams, start=1):
             teams_rows.append({"#": rank, "Team": team, "Punkte": pts})
         df_display_teams = pd.DataFrame(teams_rows).set_index("#")
-        st.table(df_display_teams)
+
+        def highlight_user_teams(row):
+            team_name = row["Team"]
+            if team_name in [
+                active_drivers["Lucas"],
+                active_drivers["Tim"],
+            ]:
+                bg_color = TEAM_TINTS.get(
+                    team_name, "rgba(255, 255, 255, 0.12)"
+                )
+                return [
+                    f"background-color: {bg_color}; font-weight: bold;"
+                ] * len(row)
+            return [""] * len(row)
+
+        styled_teams = df_display_teams.style.apply(
+            highlight_user_teams, axis=1
+        )
+        st.table(styled_teams)
 
 # --- TAB 2: RENNERGEBNISSE ---
 with tab_matrix:
