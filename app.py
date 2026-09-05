@@ -44,16 +44,6 @@ st.markdown(
             padding: 15px 20px;
             text-align: right;
         }
-        
-        /* Zweifarbiger Vergleichsbalken: Türkis (Lucas) vs. Orange (Tim) */
-        .stProgress > div > div > div > div {
-            background-color: #00d2be !important; /* Lucas: Türkis */
-        }
-        .stProgress > div > div > div {
-            background-color: #ff8700 !important; /* Tim: Orange */
-            height: 18px !important;
-            border-radius: 9px !important;
-        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -267,6 +257,9 @@ sorted_drivers = sorted(
     reverse=True,
 )
 
+# ----------------------------------------------------
+# 3. TABS
+# ----------------------------------------------------
 tab_tables, tab_matrix, tab_duel, tab_input, tab_market, tab_history = st.tabs(
     [
         "📊 WM-Stände",
@@ -397,7 +390,7 @@ with tab_matrix:
             height=580,
         )
 
-# --- TAB 3: HEAD-TO-HEAD DUELL ---
+# --- TAB 3: HEAD-TO-HEAD DUELL (ECHTER VERSUS-BALKEN) ---
 with tab_duel:
     l_team = active_drivers["Lucas"]
     t_team = active_drivers["Tim"]
@@ -466,33 +459,36 @@ with tab_duel:
     st.write("---")
     st.subheader("📊 Leistungsvergleich")
 
+    # Funktion für den garantierten 2-Farben-Balken ohne Grau
     def display_duel_bar(category_name, val_l, val_t):
-        st.markdown(
-            f"<div style='text-align: center; font-size: 0.85rem; font-weight: bold; letter-spacing: 1.5px; color: #8c96a5; text-transform: uppercase; margin-top: 15px; margin-bottom: 2px;'>{category_name}</div>",
-            unsafe_allow_html=True,
-        )
+        total = val_l + val_t
+        if total == 0:
+            pct_l = 50.0
+            pct_t = 50.0
+        else:
+            pct_l = round((val_l / total) * 100, 1)
+            pct_t = round((val_t / total) * 100, 1)
 
-        col_val_l, col_bar, col_val_t = st.columns([1, 6, 1])
-
-        with col_val_l:
-            st.markdown(
-                f"<div style='text-align: right; font-size: 1.4rem; font-weight: 900; color: #00d2be; padding-top: 0px;'>{val_l}</div>",
-                unsafe_allow_html=True,
-            )
-
-        with col_bar:
-            total = val_l + val_t
-            if total == 0:
-                pct_l = 0.50
-            else:
-                pct_l = val_l / total
-            st.progress(pct_l)
-
-        with col_val_t:
-            st.markdown(
-                f"<div style='text-align: left; font-size: 1.4rem; font-weight: 900; color: #ff8700; padding-top: 0px;'>{val_t}</div>",
-                unsafe_allow_html=True,
-            )
+        html_bar = f"""
+        <div style="margin-bottom: 16px;">
+            <div style="text-align: center; font-size: 0.85rem; font-weight: bold; letter-spacing: 1.5px; color: #8c96a5; text-transform: uppercase; margin-bottom: 6px;">
+                {category_name}
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+                <div style="font-size: 1.4rem; font-weight: 900; color: #00d2be; min-width: 45px; text-align: right;">
+                    {val_l}
+                </div>
+                <div style="flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden; display: flex; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); background-color: #232936;">
+                    <div style="width: {pct_l}%; background-color: #00d2be; height: 100%; transition: width 0.3s ease;"></div>
+                    <div style="width: {pct_t}%; background-color: #ff8700; height: 100%; transition: width 0.3s ease;"></div>
+                </div>
+                <div style="font-size: 1.4rem; font-weight: 900; color: #ff8700; min-width: 45px; text-align: left;">
+                    {val_t}
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(html_bar, unsafe_allow_html=True)
 
     display_duel_bar("WM-Punkte", s_l["Punkte"], s_t["Punkte"])
     display_duel_bar("Rennsiege", s_l["Siege"], s_t["Siege"])
