@@ -457,3 +457,15 @@ with tab_history:
                     data["races"].pop(real_idx)
                     save_data(data)
                     st.rerun()
+                    # --- ADMIN / RESET BEREICH IN DER SEITENLEISTE ---
+with st.sidebar:
+    st.markdown("### ⚙️ Admin & Test-Modus")
+    st.caption(
+        "Hier kannst du gefahrlos testen und alles wieder auf Null setzen."
+    )
+
+    if st.button("💣 Komplette Karriere zurücksetzen", type="secondary"):
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)
+        st.warning("Alles gelöscht! Frischer Neustart...")
+        st.rerun()
