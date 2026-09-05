@@ -44,12 +44,15 @@ st.markdown(
             padding: 15px 20px;
             text-align: right;
         }
-        .h2h-box {
-            background: #121620;
-            border: 1px solid #1f2637;
-            border-radius: 8px;
-            padding: 12px 20px;
-            margin-bottom: 10px;
+        
+        /* Zweifarbiger Vergleichsbalken: Türkis (Lucas) vs. Orange (Tim) */
+        .stProgress > div > div > div > div {
+            background-color: #00d2be !important; /* Lucas: Türkis */
+        }
+        .stProgress > div > div > div {
+            background-color: #ff8700 !important; /* Tim: Orange */
+            height: 18px !important;
+            border-radius: 9px !important;
         }
     </style>
 """,
@@ -264,9 +267,6 @@ sorted_drivers = sorted(
     reverse=True,
 )
 
-# ----------------------------------------------------
-# 3. TABS
-# ----------------------------------------------------
 tab_tables, tab_matrix, tab_duel, tab_input, tab_market, tab_history = st.tabs(
     [
         "📊 WM-Stände",
@@ -397,7 +397,7 @@ with tab_matrix:
             height=580,
         )
 
-# --- TAB 3: HEAD-TO-HEAD DUELL (ÜBERARBEITET) ---
+# --- TAB 3: HEAD-TO-HEAD DUELL ---
 with tab_duel:
     l_team = active_drivers["Lucas"]
     t_team = active_drivers["Tim"]
@@ -407,7 +407,6 @@ with tab_duel:
     s_l = driver_stats["Lucas"]
     s_t = driver_stats["Tim"]
 
-    # Direkte Renn-Finishes
     l_ahead = 0
     t_ahead = 0
     for r in data["races"]:
@@ -428,7 +427,6 @@ with tab_duel:
         elif t_pos < l_pos:
             t_ahead += 1
 
-    # Obere Fahrer-Cards
     c_card_l, c_vs, c_card_t = st.columns([5, 2, 5])
 
     with c_card_l:
@@ -468,7 +466,6 @@ with tab_duel:
     st.write("---")
     st.subheader("📊 Leistungsvergleich")
 
-    # Funktion für den zentralen, dicken Vergleichsbalken
     def display_duel_bar(category_name, val_l, val_t):
         st.markdown(
             f"<div style='text-align: center; font-size: 0.85rem; font-weight: bold; letter-spacing: 1.5px; color: #8c96a5; text-transform: uppercase; margin-top: 15px; margin-bottom: 2px;'>{category_name}</div>",
@@ -479,7 +476,7 @@ with tab_duel:
 
         with col_val_l:
             st.markdown(
-                f"<div style='text-align: right; font-size: 1.4rem; font-weight: 900; color: #00d2be; padding-top: 2px;'>{val_l}</div>",
+                f"<div style='text-align: right; font-size: 1.4rem; font-weight: 900; color: #00d2be; padding-top: 0px;'>{val_l}</div>",
                 unsafe_allow_html=True,
             )
 
@@ -493,7 +490,7 @@ with tab_duel:
 
         with col_val_t:
             st.markdown(
-                f"<div style='text-align: left; font-size: 1.4rem; font-weight: 900; color: #ff8700; padding-top: 2px;'>{val_t}</div>",
+                f"<div style='text-align: left; font-size: 1.4rem; font-weight: 900; color: #ff8700; padding-top: 0px;'>{val_t}</div>",
                 unsafe_allow_html=True,
             )
 
