@@ -29,6 +29,31 @@ st.markdown(
             margin-bottom: 20px;
             text-align: center;
         }
+        .h2h-driver-card {
+            background: #141822;
+            border: 1px solid #232a38;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 15px;
+        }
+        .h2h-driver-lucas { border-left: 6px solid #00d2be; }
+        .h2h-driver-tim { border-right: 6px solid #ff8700; text-align: right; }
+        .h2h-stat-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: #11141c;
+            border-radius: 8px;
+            border: 1px solid #1c222e;
+        }
+        .h2h-val-l { font-size: 1.25rem; font-weight: 800; color: #00d2be; min-width: 45px; }
+        .h2h-val-t { font-size: 1.25rem; font-weight: 800; color: #ff8700; min-width: 45px; text-align: right; }
+        .h2h-stat-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #8c96a5; font-weight: 600; text-align: center; flex: 1; }
+        .bar-container { width: 100%; max-width: 240px; height: 8px; background: #232936; border-radius: 4px; overflow: hidden; display: flex; margin: 0 15px; }
+        .bar-lucas { height: 100%; background: #00d2be; }
+        .bar-tim { height: 100%; background: #ff8700; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -36,7 +61,6 @@ st.markdown(
 
 POINTS_SYSTEM = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}
 
-# 11 Teams & 22 Fahrer (Cadillac mit Bottas & Pérez)
 OFFICIAL_GRID = {
     "Ferrari": ["Charles Leclerc", "Lewis Hamilton"],
     "McLaren": ["Lando Norris", "Oscar Piastri"],
@@ -51,7 +75,6 @@ OFFICIAL_GRID = {
     "Cadillac": ["Valtteri Bottas", "Sergio Pérez"],
 }
 
-# Dezente, blasse Teamfarben für die Zeilen-Hinterlegung
 TEAM_TINTS = {
     "Ferrari": "rgba(232, 0, 32, 0.18)",
     "McLaren": "rgba(255, 128, 0, 0.18)",
@@ -156,7 +179,7 @@ if not data.get("career_started", False):
         if st.form_submit_button(
             "Saison starten", type="primary", use_container_width=True
         ):
-            if lucas_seat == tim_seat:
+            if lucas_team == tim_team and lucas_seat == tim_seat:
                 st.error("Ihr könnt nicht denselben Fahrer im selben Team ersetzen.")
             else:
                 data["career_started"] = True
@@ -248,14 +271,14 @@ tab_tables, tab_matrix, tab_duel, tab_input, tab_market, tab_history = st.tabs(
     [
         "📊 WM-Stände",
         "🏁 Rennergebnisse",
-        "⚔️ Teamduell",
+        "⚔️ Head-to-Head",
         "➕ Nächstes Rennen",
         "🔄 Fahrermarkt",
         "🗓️ Kalender",
     ]
 )
 
-# --- TAB 1: WM-STÄNDE MIT DEZENTER ZEILENFARBE ---
+# --- TAB 1: WM-STÄNDE ---
 with tab_tables:
     col_drivers, col_constructors = st.columns([3, 2], gap="large")
 
@@ -278,7 +301,6 @@ with tab_tables:
             )
         df_display_drivers = pd.DataFrame(drivers_rows).set_index("#")
 
-        # Färbt die Zeile dezent in der jeweiligen Teamfarbe ein
         def highlight_user_rows(row):
             driver_name = row["Fahrer"]
             if driver_name in ["Lucas", "Tim"]:
@@ -375,30 +397,107 @@ with tab_matrix:
             height=580,
         )
 
-# --- TAB 3: TEAM-DUELL ---
+# --- TAB 3: HEAD-TO-HEAD DUELL ---
 with tab_duel:
-    st.subheader("Head-to-Head: Lucas vs. Tim")
-    l_pts = driver_stats["Lucas"]["Punkte"]
-    t_pts = driver_stats["Tim"]["Punkte"]
+    l_team = active_drivers["Lucas"]
+    t_team = active_drivers["Tim"]
+    l_rank = sorted_drivers.index("Lucas") + 1
+    t_rank = sorted_drivers.index("Tim") + 1
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Punkte", f"{l_pts} : {t_pts}", delta=f"{l_pts - t_pts} Differenz")
-    m2.metric(
-        "Siege",
-        f"{driver_stats['Lucas']['Siege']} : {driver_stats['Tim']['Siege']}",
-    )
-    m3.metric(
-        "Podien",
-        f"{driver_stats['Lucas']['Podien']} : {driver_stats['Tim']['Podien']}",
-    )
-    m4.metric(
-        "Schnellste Runden",
-        f"{driver_stats['Lucas']['Fastest Laps']} : {driver_stats['Tim']['Fastest Laps']}",
-    )
+    s_l = driver_stats["Lucas"]
+    s_t = driver_stats["Tim"]
 
-    st.write(
-        f"**Teams:** Lucas fährt für **{data['lucas']['current_team']}** | Tim fährt für **{data['tim']['current_team']}**"
-    )
+    l_ahead = 0
+    t_ahead = 0
+    for r in data["races"]:
+        res = r["results"]
+        dnfs = r.get("dnfs", [])
+        l_pos = (
+            999
+            if "Lucas" in dnfs
+            else (res.index("Lucas") if "Lucas" in res else 999)
+        )
+        t_pos = (
+            999
+            if "Tim" in dnfs
+            else (res.index("Tim") if "Tim" in res else 999)
+        )
+
+        if l_pos < t_pos:
+            l_ahead += 1
+        elif t_pos < l_pos:
+            t_ahead += 1
+
+    c_card_l, c_vs, c_card_t = st.columns([5, 2, 5])
+
+    with c_card_l:
+        st.markdown(
+            f"""
+            <div class="h2h-driver-card h2h-driver-lucas">
+                <div style="font-size: 0.8rem; text-transform: uppercase; color: #00d2be; font-weight: bold; letter-spacing: 1px;">Cockpit #1</div>
+                <div style="font-size: 1.8rem; font-weight: 900; margin: 2px 0;">LUCAS</div>
+                <div style="color: #9aa5b5; font-size: 0.95rem;">{l_team} • <span style="color: #f1f1f1; font-weight: bold;">P{l_rank} in der WM</span></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with c_vs:
+        st.markdown(
+            """
+            <div style="text-align: center; padding-top: 25px;">
+                <span style="background: #e10600; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 900; font-size: 0.9rem; letter-spacing: 1px;">VS</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with c_card_t:
+        st.markdown(
+            f"""
+            <div class="h2h-driver-card h2h-driver-tim">
+                <div style="font-size: 0.8rem; text-transform: uppercase; color: #ff8700; font-weight: bold; letter-spacing: 1px;">Cockpit #2</div>
+                <div style="font-size: 1.8rem; font-weight: 900; margin: 2px 0;">TIM</div>
+                <div style="color: #9aa5b5; font-size: 0.95rem;">{t_team} • <span style="color: #f1f1f1; font-weight: bold;">P{t_rank} in der WM</span></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    def render_h2h_metric(label, val_l, val_t):
+        total = val_l + val_t
+        if total == 0:
+            pct_l = 50.0
+            pct_t = 50.0
+        else:
+            pct_l = (val_l / total) * 100
+            pct_t = (val_t / total) * 100
+
+        html = f"""
+        <div class="h2h-stat-row">
+            <div class="h2h-val-l">{val_l}</div>
+            <div class="bar-container">
+                <div class="bar-lucas" style="width: {pct_l}%;"></div>
+                <div class="bar-tim" style="width: {pct_t}%;"></div>
+            </div>
+            <div class="h2h-stat-label">{label}</div>
+            <div class="bar-container">
+                <div class="bar-lucas" style="width: {pct_l}%;"></div>
+                <div class="bar-tim" style="width: {pct_t}%;"></div>
+            </div>
+            <div class="h2h-val-t">{val_t}</div>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
+
+    st.write("### 📊 Leistungsvergleich")
+    render_h2h_metric("WM-Punkte", s_l["Punkte"], s_t["Punkte"])
+    render_h2h_metric("Rennsiege", s_l["Siege"], s_t["Siege"])
+    render_h2h_metric("Podiumsplätze", s_l["Podien"], s_t["Podien"])
+    render_h2h_metric("Top 10 Finishes", s_l["Top 10"], s_t["Top 10"])
+    render_h2h_metric("Schnellste Runden", s_l["Fastest Laps"], s_t["Fastest Laps"])
+    render_h2h_metric("Besserer Zieleinlauf", l_ahead, t_ahead)
+    render_h2h_metric("Ausfälle (DNF)", s_l["DNFs"], s_t["DNFs"])
 
 # --- TAB 4: ERFASSUNG ---
 with tab_input:
