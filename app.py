@@ -44,6 +44,14 @@ st.markdown(
             padding: 15px 20px;
             text-align: right;
         }
+        .danger-confirm-box {
+            background: rgba(225, 6, 0, 0.15);
+            border: 1px solid #e10600;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -126,14 +134,17 @@ def save_available_saves(saves_list):
 
 all_saves = get_available_saves()
 
-# Seitenleiste: Spielstand-Auswahl
+# State für Reset-Bestätigung initialisieren
+if "confirm_delete" not in st.session_state:
+    st.session_state.confirm_delete = False
+
+# Seitenleiste: Spielstand-Auswahl & Reset-Sicherheitsabfrage
 with st.sidebar:
     st.markdown("### 💾 Spielstand-Manager")
     selected_save = st.selectbox("Aktiver Spielstand / Saison:", all_saves)
 
     DATA_FILE = f"save_{selected_save.replace(' ', '_').replace('/', '_')}.json"
 
-    # Neuen Spielstand anlegen
     with st.expander("➕ Neuer Spielstand (z. B. F1 27)"):
         new_save_name = st.text_input("Name für neue Saison/Karriere:")
         if st.button("Erstellen"):
@@ -146,7 +157,6 @@ with st.sidebar:
     st.write("---")
     st.markdown("### ⚙️ Reset & Backup")
 
-    # Backup Download
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             file_data = f.read()
@@ -158,12 +168,36 @@ with st.sidebar:
             use_container_width=True,
         )
 
-    # Löschen des aktiven Spielstands
-    if st.button("💣 Aktiven Spielstand löschen", use_container_width=True):
-        if os.path.exists(DATA_FILE):
-            os.remove(DATA_FILE)
-        st.warning(f"'{selected_save}' wurde zurückgesetzt!")
-        st.rerun()
+    # 2-Stufen-Löschung mit Bestätigungsmenü
+    if not st.session_state.confirm_delete:
+        if st.button("💣 Aktiven Spielstand löschen", use_container_width=True):
+            st.session_state.confirm_delete = True
+            st.rerun()
+    else:
+        st.markdown(
+            """
+            <div class="danger-confirm-box">
+                <b style="color: #ff4b4b;">⚠️ BIST DU DIR SICHER?</b><br>
+                <small>Alle Daten und Rennen dieses Spielstands werden unwiderruflich gelöscht!</small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        col_yes, col_no = st.columns(2)
+        with col_yes:
+            # Roter primärer Bestätigungs-Button
+            if st.button(
+                "Ja, löschen", type="primary", use_container_width=True
+            ):
+                if os.path.exists(DATA_FILE):
+                    os.remove(DATA_FILE)
+                st.session_state.confirm_delete = False
+                st.rerun()
+        with col_no:
+            # Neutraler Abbruch-Button
+            if st.button("Nein, abbrechen", use_container_width=True):
+                st.session_state.confirm_delete = False
+                st.rerun()
 
 
 def load_data():
@@ -550,7 +584,9 @@ with tab_duel:
 with tab_input:
     completed = len(data["races"])
     if completed >= len(SEASON_2026_CALENDAR):
-        st.success("🎉 Die Saison ist vollständig beendet! Ihr könnt im Fahrermarkt die nächste Saison freischalten.")
+        st.success(
+            "🎉 Die Saison ist vollständig beendet! Ihr könnt im Fahrermarkt die nächste Saison freischalten."
+        )
     else:
         current_track = SEASON_2026_CALENDAR[completed]
 
@@ -638,7 +674,7 @@ with tab_input:
                     save_data(data)
                     st.rerun()
 
-# --- TAB 5: FAHRERMARKT (STRIKT GESICHERT) ---
+# --- TAB 5: FAHRERMARKT ---
 with tab_market:
     st.subheader("Fahrermarkt (Maximal 1 Wechsel pro Fahrer pro Saison)")
     col_tl, col_tt = st.columns(2)
@@ -646,7 +682,9 @@ with tab_market:
     with col_tl:
         st.markdown(f"### Lucas (Aktuell: {data['lucas']['current_team']})")
         if data["lucas"]["transfers_used"] >= 1:
-            st.error("🔒 Teamwechsel gesperrt: Dein Wechsel-Joker für diese Saison ist bereits aufgebraucht!")
+            st.error(
+                "🔒 Teamwechsel gesperrt: Dein Wechsel-Joker für diese Saison ist bereits aufgebraucht!"
+            )
         else:
             with st.form("transfer_lucas"):
                 new_team = st.selectbox(
@@ -668,7 +706,9 @@ with tab_market:
     with col_tt:
         st.markdown(f"### Tim (Aktuell: {data['tim']['current_team']})")
         if data["tim"]["transfers_used"] >= 1:
-            st.error("🔒 Teamwechsel gesperrt: Tims Wechsel-Joker für diese Saison ist bereits aufgebraucht!")
+            st.error(
+                "🔒 Teamwechsel gesperrt: Tims Wechsel-Joker für diese Saison ist bereits aufgebraucht!"
+            )
         else:
             with st.form("transfer_tim"):
                 new_team = st.selectbox(
@@ -690,14 +730,18 @@ with tab_market:
     st.write("---")
     completed_races = len(data.get("races", []))
     if completed_races >= len(SEASON_2026_CALENDAR):
-        if st.button("🏁 Saison beenden & Neue Saison freischalten (Joker zurücksetzen)"):
+        if st.button(
+            "🏁 Saison beenden & Neue Saison freischalten (Joker zurücksetzen)"
+        ):
             data["lucas"]["transfers_used"] = 0
             data["tim"]["transfers_used"] = 0
             save_data(data)
             st.success("Neue Saison gestartet! Die Wechsel-Joker sind wieder aktiv.")
             st.rerun()
     else:
-        st.caption(f"ℹ️ Die Wechsel-Joker können erst nach Abschluss aller 24 Saisonrennen zurückgesetzt werden ({completed_races}/24 absolviert).")
+        st.caption(
+            f"ℹ️ Die Wechsel-Joker können erst nach Abschluss aller 24 Saisonrennen zurückgesetzt werden ({completed_races}/24 absolviert)."
+        )
 
 # --- TAB 6: KALENDER & HISTORIE ---
 with tab_history:
