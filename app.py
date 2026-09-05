@@ -106,7 +106,64 @@ SEASON_2026_CALENDAR = [
     "🇦🇪 24. Abu Dhabi",
 ]
 
-DATA_FILE = "career_save.json"
+# ----------------------------------------------------
+# SAVEGAME- & PROFILE-VERWALTUNG
+# ----------------------------------------------------
+SAVES_INDEX_FILE = "saves_index.json"
+
+
+def get_available_saves():
+    if os.path.exists(SAVES_INDEX_FILE):
+        with open(SAVES_INDEX_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return ["Saison 1 (2026)"]
+
+
+def save_available_saves(saves_list):
+    with open(SAVES_INDEX_FILE, "w", encoding="utf-8") as f:
+        json.dump(saves_list, f, indent=4, ensure_ascii=False)
+
+
+all_saves = get_available_saves()
+
+# Seitenleiste: Spielstand-Auswahl
+with st.sidebar:
+    st.markdown("### 💾 Spielstand-Manager")
+    selected_save = st.selectbox("Aktiver Spielstand / Saison:", all_saves)
+
+    DATA_FILE = f"save_{selected_save.replace(' ', '_').replace('/', '_')}.json"
+
+    # Neuen Spielstand anlegen
+    with st.expander("➕ Neuer Spielstand (z. B. F1 27)"):
+        new_save_name = st.text_input("Name für neue Saison/Karriere:")
+        if st.button("Erstellen"):
+            if new_save_name and new_save_name not in all_saves:
+                all_saves.append(new_save_name)
+                save_available_saves(all_saves)
+                st.success(f"Spielstand '{new_save_name}' angelegt!")
+                st.rerun()
+
+    st.write("---")
+    st.markdown("### ⚙️ Reset & Backup")
+
+    # Backup Download
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            file_data = f.read()
+        st.download_button(
+            label="📥 Spielstand als Datei sichern",
+            data=file_data,
+            file_name=f"{selected_save}.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+
+    # Löschen des aktiven Spielstands
+    if st.button("💣 Aktiven Spielstand löschen", use_container_width=True):
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)
+        st.warning(f"'{selected_save}' wurde zurückgesetzt!")
+        st.rerun()
 
 
 def load_data():
@@ -124,27 +181,20 @@ def save_data(d):
 data = load_data()
 
 st.markdown(
-    """
+    f"""
     <div class="main-header">
-        <h1 style="margin:0; font-size: 2rem;">🏎️ FORMULA 1 KOOP-KARRIERE 2026</h1>
-        <p style="margin:4px 0 0 0; opacity: 0.85;">Meisterschafts-Hub für Lucas & Tim</p>
+        <h1 style="margin:0; font-size: 2rem;">🏎️ FORMULA 1 KOOP-KARRIERE</h1>
+        <p style="margin:4px 0 0 0; opacity: 0.85;">Aktiver Spielstand: <b>{selected_save}</b></p>
     </div>
 """,
     unsafe_allow_html=True,
 )
 
-with st.sidebar:
-    st.markdown("### ⚙️ Steuerung")
-    if st.button("💣 Karriere komplett zurücksetzen", use_container_width=True):
-        if os.path.exists(DATA_FILE):
-            os.remove(DATA_FILE)
-        st.rerun()
-
 # ----------------------------------------------------
 # 1. SETUP
 # ----------------------------------------------------
 if not data.get("career_started", False):
-    st.subheader("🏁 Cockpit-Setup")
+    st.subheader(f"🏁 Cockpit-Setup für {selected_save}")
     with st.form("setup_form"):
         col_l, col_t = st.columns(2)
         teams = sorted(list(OFFICIAL_GRID.keys()))
@@ -257,9 +307,6 @@ sorted_drivers = sorted(
     reverse=True,
 )
 
-# ----------------------------------------------------
-# 3. TABS
-# ----------------------------------------------------
 tab_tables, tab_matrix, tab_duel, tab_input, tab_market, tab_history = st.tabs(
     [
         "📊 WM-Stände",
@@ -390,7 +437,7 @@ with tab_matrix:
             height=580,
         )
 
-# --- TAB 3: HEAD-TO-HEAD DUELL (ECHTER VERSUS-BALKEN) ---
+# --- TAB 3: HEAD-TO-HEAD DUELL ---
 with tab_duel:
     l_team = active_drivers["Lucas"]
     t_team = active_drivers["Tim"]
@@ -459,7 +506,6 @@ with tab_duel:
     st.write("---")
     st.subheader("📊 Leistungsvergleich")
 
-    # Funktion für den garantierten 2-Farben-Balken ohne Grau
     def display_duel_bar(category_name, val_l, val_t):
         total = val_l + val_t
         if total == 0:
@@ -504,7 +550,7 @@ with tab_duel:
 with tab_input:
     completed = len(data["races"])
     if completed >= len(SEASON_2026_CALENDAR):
-        st.success("Saison ist beendet.")
+        st.success("🎉 Die Saison ist vollständig beendet! Ihr könnt im Fahrermarkt die nächste Saison freischalten.")
     else:
         current_track = SEASON_2026_CALENDAR[completed]
 
@@ -592,15 +638,15 @@ with tab_input:
                     save_data(data)
                     st.rerun()
 
-# --- TAB 5: FAHRERMARKT ---
+# --- TAB 5: FAHRERMARKT (STRIKT GESICHERT) ---
 with tab_market:
-    st.subheader("Fahrermarkt")
+    st.subheader("Fahrermarkt (Maximal 1 Wechsel pro Fahrer pro Saison)")
     col_tl, col_tt = st.columns(2)
 
     with col_tl:
         st.markdown(f"### Lucas (Aktuell: {data['lucas']['current_team']})")
         if data["lucas"]["transfers_used"] >= 1:
-            st.warning("Wechsel-Joker für diese Saison verbraucht.")
+            st.error("🔒 Teamwechsel gesperrt: Dein Wechsel-Joker für diese Saison ist bereits aufgebraucht!")
         else:
             with st.form("transfer_lucas"):
                 new_team = st.selectbox(
@@ -615,14 +661,14 @@ with tab_market:
                 if st.form_submit_button("Zu diesem Team wechseln"):
                     data["lucas"]["current_team"] = new_team
                     data["lucas"]["replaces"] = replaced
-                    data["lucas"]["transfers_used"] += 1
+                    data["lucas"]["transfers_used"] = 1
                     save_data(data)
                     st.rerun()
 
     with col_tt:
         st.markdown(f"### Tim (Aktuell: {data['tim']['current_team']})")
         if data["tim"]["transfers_used"] >= 1:
-            st.warning("Wechsel-Joker für diese Saison verbraucht.")
+            st.error("🔒 Teamwechsel gesperrt: Tims Wechsel-Joker für diese Saison ist bereits aufgebraucht!")
         else:
             with st.form("transfer_tim"):
                 new_team = st.selectbox(
@@ -637,9 +683,21 @@ with tab_market:
                 if st.form_submit_button("Zu diesem Team wechseln"):
                     data["tim"]["current_team"] = new_team
                     data["tim"]["replaces"] = replaced
-                    data["tim"]["transfers_used"] += 1
+                    data["tim"]["transfers_used"] = 1
                     save_data(data)
                     st.rerun()
+
+    st.write("---")
+    completed_races = len(data.get("races", []))
+    if completed_races >= len(SEASON_2026_CALENDAR):
+        if st.button("🏁 Saison beenden & Neue Saison freischalten (Joker zurücksetzen)"):
+            data["lucas"]["transfers_used"] = 0
+            data["tim"]["transfers_used"] = 0
+            save_data(data)
+            st.success("Neue Saison gestartet! Die Wechsel-Joker sind wieder aktiv.")
+            st.rerun()
+    else:
+        st.caption(f"ℹ️ Die Wechsel-Joker können erst nach Abschluss aller 24 Saisonrennen zurückgesetzt werden ({completed_races}/24 absolviert).")
 
 # --- TAB 6: KALENDER & HISTORIE ---
 with tab_history:
