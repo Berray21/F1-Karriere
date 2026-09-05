@@ -59,16 +59,17 @@ st.markdown(
 
 POINTS_SYSTEM = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}
 
+# 11 Teams & 22 Fahrer (Offizielles 2026er Grid mit Audi & aktuellem Red-Bull-Pool)
 OFFICIAL_GRID = {
     "Ferrari": ["Charles Leclerc", "Lewis Hamilton"],
     "McLaren": ["Lando Norris", "Oscar Piastri"],
-    "Red Bull": ["Max Verstappen", "Liam Lawson"],
+    "Red Bull": ["Max Verstappen", "Isack Hadjar"],
     "Mercedes": ["George Russell", "Kimi Antonelli"],
     "Aston Martin": ["Fernando Alonso", "Lance Stroll"],
     "Williams": ["Carlos Sainz", "Alex Albon"],
     "Alpine": ["Pierre Gasly", "Franco Colapinto"],
-    "RB": ["Yuki Tsunoda", "Isack Hadjar"],
-    "Sauber / Audi": ["Nico Hülkenberg", "Gabriel Bortoleto"],
+    "Racing Bulls": ["Liam Lawson", "Arvid Lindblad"],
+    "Audi": ["Nico Hülkenberg", "Gabriel Bortoleto"],
     "Haas": ["Esteban Ocon", "Oliver Bearman"],
     "Cadillac": ["Valtteri Bottas", "Sergio Pérez"],
 }
@@ -81,8 +82,8 @@ TEAM_TINTS = {
     "Aston Martin": "rgba(34, 153, 113, 0.18)",
     "Williams": "rgba(100, 196, 255, 0.18)",
     "Alpine": "rgba(0, 147, 204, 0.18)",
-    "RB": "rgba(102, 146, 255, 0.18)",
-    "Sauber / Audi": "rgba(82, 226, 82, 0.18)",
+    "Racing Bulls": "rgba(102, 146, 255, 0.18)",
+    "Audi": "rgba(235, 10, 30, 0.18)",
     "Haas": "rgba(182, 186, 189, 0.18)",
     "Cadillac": "rgba(218, 165, 32, 0.18)",
 }
@@ -218,7 +219,7 @@ st.markdown(
 )
 
 # ----------------------------------------------------
-# 1. SETUP (JETZT MIT DIREKT DYNAMISCHER FAHRERAUSWAHL)
+# 1. SETUP (DYNAMISCHE LIVE-AUSWAHL)
 # ----------------------------------------------------
 if not data.get("career_started", False):
     st.subheader(f"🏁 Cockpit-Setup für {selected_save}")
@@ -228,7 +229,6 @@ if not data.get("career_started", False):
     with col_l:
         st.markdown("### Cockpit: Lucas")
         lucas_team = st.selectbox("Team für Lucas", teams, key="l_team_select")
-        # Aktualisiert sich sofort passend zum gewählten Team
         lucas_seat = st.selectbox(
             f"Welchen Fahrer ersetzt Lucas bei {lucas_team}?",
             OFFICIAL_GRID[lucas_team],
@@ -238,7 +238,6 @@ if not data.get("career_started", False):
     with col_t:
         st.markdown("### Cockpit: Tim")
         tim_team = st.selectbox("Team für Tim", teams, key="t_team_select")
-        # Falls gleiches Team: Den von Lucas gewählten Fahrer ausschließen
         if tim_team == lucas_team:
             avail_tim = [d for d in OFFICIAL_GRID[tim_team] if d != lucas_seat]
         else:
@@ -674,7 +673,7 @@ with tab_input:
                     save_data(data)
                     st.rerun()
 
-# --- TAB 5: FAHRERMARKT (DYNAMISCHE TEAM- & FAHRERWAHL) ---
+# --- TAB 5: FAHRERMARKT ---
 with tab_market:
     st.subheader("Fahrermarkt (Maximal 1 Wechsel pro Fahrer pro Saison)")
     col_tl, col_tt = st.columns(2)
