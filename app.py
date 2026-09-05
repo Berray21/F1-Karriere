@@ -16,11 +16,10 @@ st.markdown(
         .stApp { background-color: #0b0e14; color: #f1f1f1; }
         .main-header {
             background: linear-gradient(90deg, #e10600 0%, #1e222d 100%);
-            padding: 20px;
-            border-radius: 12px;
+            padding: 18px 22px;
+            border-radius: 10px;
             margin-bottom: 20px;
             border-left: 8px solid #ff1801;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         .current-race-box {
             background: #151922;
@@ -30,6 +29,37 @@ st.markdown(
             margin-bottom: 20px;
             text-align: center;
         }
+        .f1-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92rem;
+            background-color: #12161f;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .f1-table th {
+            background-color: #1c222e;
+            color: #e10600;
+            text-align: left;
+            padding: 9px 12px;
+            font-weight: bold;
+            border-bottom: 2px solid #283040;
+        }
+        .f1-table td {
+            padding: 7px 12px;
+            border-bottom: 1px solid #1e2533;
+        }
+        .f1-table tr:hover {
+            background-color: #1a202c;
+        }
+        .highlight-lucas {
+            color: #00d2be;
+            font-weight: bold;
+        }
+        .highlight-tim {
+            color: #ff8700;
+            font-weight: bold;
+        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -37,7 +67,6 @@ st.markdown(
 
 POINTS_SYSTEM = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}
 
-# Offizielles 2026er Starterfeld: 11 Teams & 22 Cockpits (inkl. Cadillac)
 OFFICIAL_GRID = {
     "Ferrari": ["Charles Leclerc", "Lewis Hamilton"],
     "McLaren": ["Lando Norris", "Oscar Piastri"],
@@ -49,35 +78,34 @@ OFFICIAL_GRID = {
     "RB": ["Yuki Tsunoda", "Isack Hadjar"],
     "Sauber / Audi": ["Nico Hülkenberg", "Gabriel Bortoleto"],
     "Haas": ["Esteban Ocon", "Oliver Bearman"],
-    "Cadillac": ["Fahrer 1 (Cadillac)", "Fahrer 2 (Cadillac)"],
+    "Cadillac": ["Fahrer 1", "Fahrer 2"],
 }
 
-# 24 Rennen inkl. Barcelona & Madrid (nach Monza)
 SEASON_2026_CALENDAR = [
-    "🇧🇭 1. Bahrain (Sakhir)",
-    "🇸🇦 2. Saudi-Arabien (Dschidda)",
-    "🇦🇺 3. Australien (Melbourne)",
-    "🇯🇵 4. Japan (Suzuka)",
-    "🇨🇳 5. China (Shanghai)",
-    "🇺🇸 6. USA (Miami)",
-    "🇮🇹 7. Italien (Imola / Emilia-Romagna)",
-    "🇲🇨 8. Monaco (Monte Carlo)",
-    "🇪🇸 9. Spanien (Barcelona-Catalunya)",
-    "🇨🇦 10. Kanada (Montreal)",
-    "🇦🇹 11. Österreich (Spielberg)",
-    "🇬🇧 12. Großbritannien (Silverstone)",
-    "🇧🇪 13. Belgien (Spa-Francorchamps)",
-    "🇭🇺 14. Ungarn (Budapest)",
-    "🇳🇱 15. Niederlande (Zandvoort)",
-    "🇮🇹 16. Italien (Monza)",
-    "🇪🇸 17. Spanien (Madrid - IFEMA)",
-    "🇦🇿 18. Aserbaidschan (Baku)",
-    "🇸🇬 19. Singapur (Marina Bay)",
-    "🇺🇸 20. USA (Austin)",
-    "🇲🇽 21. Mexiko (Mexiko-Stadt)",
-    "🇧🇷 22. Brasilien (São Paulo)",
-    "🇶🇦 23. Katar (Lusail)",
-    "🇦🇪 24. Abu Dhabi (Yas Marina)",
+    "🇧🇭 1. Bahrain",
+    "🇸🇦 2. Saudi-Arabien",
+    "🇦🇺 3. Australien",
+    "🇯🇵 4. Japan",
+    "🇨🇳 5. China",
+    "🇺🇸 6. Miami",
+    "🇮🇹 7. Imola",
+    "🇲🇨 8. Monaco",
+    "🇪🇸 9. Barcelona",
+    "🇨🇦 10. Montreal",
+    "🇦🇹 11. Österreich",
+    "🇬🇧 12. Silverstone",
+    "🇧🇪 13. Spa",
+    "🇭🇺 14. Budapest",
+    "🇳🇱 15. Zandvoort",
+    "🇮🇹 16. Monza",
+    "🇪🇸 17. Madrid",
+    "🇦🇿 18. Baku",
+    "🇸🇬 19. Singapur",
+    "🇺🇸 20. Austin",
+    "🇲🇽 21. Mexiko",
+    "🇧🇷 22. São Paulo",
+    "🇶🇦 23. Katar",
+    "🇦🇪 24. Abu Dhabi",
 ]
 
 DATA_FILE = "career_save.json"
@@ -97,64 +125,54 @@ def save_data(d):
 
 data = load_data()
 
-# Header
 st.markdown(
     """
     <div class="main-header">
-        <h1 style="margin:0; font-size: 2.1rem;">🏎️ FORMULA 1 KOOP-KARRIERE 2026 (11 TEAMS)</h1>
-        <p style="margin:4px 0 0 0; opacity: 0.85;">Saison-Tracking für Lucas & Tim (22 Fahrer im Feld)</p>
+        <h1 style="margin:0; font-size: 2rem;">🏎️ FORMULA 1 KOOP-KARRIERE 2026</h1>
+        <p style="margin:4px 0 0 0; opacity: 0.85;">Meisterschafts-Hub für Lucas & Tim</p>
     </div>
 """,
     unsafe_allow_html=True,
 )
 
-# Admin-Sidebar
 with st.sidebar:
-    st.markdown("### ⚙️ Steuerung & Test-Reset")
-    st.caption("Damit setzt du alle Daten zurück auf den Setup-Startbildschirm.")
+    st.markdown("### ⚙️ Steuerung")
     if st.button("💣 Karriere komplett zurücksetzen", use_container_width=True):
         if os.path.exists(DATA_FILE):
             os.remove(DATA_FILE)
-        st.warning("Spielstand gelöscht! Frischer Neustart...")
         st.rerun()
 
 # ----------------------------------------------------
-# 1. SETUP-BILDSCHIRM
+# 1. SETUP
 # ----------------------------------------------------
 if not data.get("career_started", False):
-    st.subheader("🏁 Karriere-Setup: Wählt eure Cockpits (11 Teams)")
-    st.write(
-        "Wählt euer Team (jetzt inklusive Cadillac!) und welchen Piloten ihr ersetzt:"
-    )
-
+    st.subheader("🏁 Cockpit-Setup")
     with st.form("setup_form"):
         col_l, col_t = st.columns(2)
         teams = sorted(list(OFFICIAL_GRID.keys()))
 
         with col_l:
-            st.markdown("### 🟢 Cockpit: Lucas")
-            lucas_team = st.selectbox("Team für Lucas", teams, key="l_team")
+            st.markdown("### Cockpit: Lucas")
+            lucas_team = st.selectbox("Team", teams, key="l_team")
             lucas_seat = st.selectbox(
-                "Welchen Fahrer ersetzt Lucas?",
-                OFFICIAL_GRID[lucas_team],
-                key="l_seat",
+                "Ersetzt Fahrer", OFFICIAL_GRID[lucas_team], key="l_seat"
             )
 
         with col_t:
-            st.markdown("### 🟠 Cockpit: Tim")
-            tim_team = st.selectbox("Team für Tim", teams, key="t_team")
+            st.markdown("### Cockpit: Tim")
+            tim_team = st.selectbox("Team", teams, key="t_team")
             avail_tim = [d for d in OFFICIAL_GRID[tim_team] if d != lucas_seat]
             if not avail_tim:
                 avail_tim = OFFICIAL_GRID[tim_team]
             tim_seat = st.selectbox(
-                "Welchen Fahrer ersetzt Tim?", avail_tim, key="t_seat"
+                "Ersetzt Fahrer", avail_tim, key="t_seat"
             )
 
         if st.form_submit_button(
-            "🚀 Saison 2026 starten", type="primary", use_container_width=True
+            "Saison starten", type="primary", use_container_width=True
         ):
             if lucas_seat == tim_seat:
-                st.error("Ihr könnt nicht denselben Fahrer im selben Team ersetzen!")
+                st.error("Ihr könnt nicht denselben Fahrer im selben Team ersetzen.")
             else:
                 data["career_started"] = True
                 data["lucas"] = {
@@ -169,13 +187,11 @@ if not data.get("career_started", False):
                 }
                 data["races"] = []
                 save_data(data)
-                st.success("Karriere gestartet!")
                 st.rerun()
-
     st.stop()
 
 # ----------------------------------------------------
-# 2. AKTIVES STARTERFELD (22 FAHRER)
+# 2. STARTERFELD & PUNKTE
 # ----------------------------------------------------
 active_drivers = {}
 for team, drivers in OFFICIAL_GRID.items():
@@ -186,9 +202,6 @@ for team, drivers in OFFICIAL_GRID.items():
 active_drivers["Lucas"] = data["lucas"]["current_team"]
 active_drivers["Tim"] = data["tim"]["current_team"]
 
-# ----------------------------------------------------
-# 3. PUNKTE & BERECHNUNG
-# ----------------------------------------------------
 driver_stats = {
     d: {
         "Punkte": 0,
@@ -209,7 +222,6 @@ for race in data["races"]:
     fl = race.get("fastest_lap")
     race_teams = race.get("driver_teams", active_drivers)
 
-    # Schnellste Runde (+1 Punkt nur in den Top 10)
     if fl and fl in driver_stats and fl in res[:10]:
         driver_stats[fl]["Fastest Laps"] += 1
         driver_stats[fl]["Punkte"] += 1
@@ -217,12 +229,10 @@ for race in data["races"]:
         if t:
             constructor_points[t] += 1
 
-    # DNFs zählen
     for dnf_driver in dnfs:
         if dnf_driver in driver_stats:
             driver_stats[dnf_driver]["DNFs"] += 1
 
-    # Plätze 1 bis 22
     for pos, driver in enumerate(res, start=1):
         if driver in driver_stats:
             pts = POINTS_SYSTEM.get(pos, 0)
@@ -238,82 +248,105 @@ for race in data["races"]:
             if pos <= 3:
                 driver_stats[driver]["Podien"] += 1
 
-# Sortierte Fahrer nach aktuellem WM-Stand
 sorted_drivers = sorted(
     active_drivers.keys(),
     key=lambda d: (
         driver_stats[d]["Punkte"],
         driver_stats[d]["Siege"],
         driver_stats[d]["Podien"],
+        driver_stats[d]["Top 10"],
     ),
     reverse=True,
 )
 
-# ----------------------------------------------------
-# 4. TABS
-# ----------------------------------------------------
 tab_tables, tab_matrix, tab_duel, tab_input, tab_market, tab_history = st.tabs(
     [
         "📊 WM-Stände",
-        "🏁 Rennergebnisse (Matrix)",
+        "🏁 Rennergebnisse",
         "⚔️ Teamduell",
-        "➕ Nächstes Rennen (P1-P22)",
+        "➕ Nächstes Rennen",
         "🔄 Fahrermarkt",
         "🗓️ Kalender",
     ]
 )
 
-# --- TAB 1: WM-STÄNDE ---
+# --- TAB 1: WM-STÄNDE OHNE SCROLLEN ---
 with tab_tables:
-    c_d, c_t = st.columns([3, 2], gap="large")
-    with c_d:
-        st.subheader("Fahrerwertung (22 Piloten)")
-        df_d = (
-            pd.DataFrame.from_dict(driver_stats, orient="index")
-            .reset_index()
-            .rename(columns={"index": "Fahrer"})
-        )
-        df_d = df_d.sort_values(
-            by=["Punkte", "Siege", "Podien", "Top 10"], ascending=False
-        ).reset_index(drop=True)
-        df_d.index += 1
-        st.dataframe(
-            df_d[
-                [
-                    "Fahrer",
-                    "Team",
-                    "Punkte",
-                    "Siege",
-                    "Podien",
-                    "Fastest Laps",
-                    "DNFs",
-                ]
-            ],
-            use_container_width=True,
-            height=650,
-        )
+    col_drivers, col_constructors = st.columns([3, 2], gap="large")
 
-    with c_t:
-        st.subheader("Konstrukteurswertung (11 Teams)")
-        df_c = (
-            pd.DataFrame(
-                list(constructor_points.items()), columns=["Team", "Punkte"]
-            )
-            .sort_values(by="Punkte", ascending=False)
-            .reset_index(drop=True)
-        )
-        df_c.index += 1
-        st.dataframe(df_c, use_container_width=True, height=450)
+    with col_drivers:
+        st.subheader("Fahrerwertung")
+        html_drivers = """
+        <table class="f1-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">#</th>
+                    <th>Fahrer</th>
+                    <th>Team</th>
+                    <th style="text-align: right;">Punkte</th>
+                    <th style="text-align: right;">Siege</th>
+                    <th style="text-align: right;">Podien</th>
+                    <th style="text-align: right;">FL</th>
+                    <th style="text-align: right;">DNF</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
+        for rank, d in enumerate(sorted_drivers, start=1):
+            s = driver_stats[d]
+            cls = ""
+            if d == "Lucas":
+                cls = ' class="highlight-lucas"'
+            elif d == "Tim":
+                cls = ' class="highlight-tim"'
 
-# --- TAB 2: RENNERGEBNISSE (MATRIX-HEATMAP P1-P22) ---
+            html_drivers += f"""
+                <tr>
+                    <td><b>{rank}</b></td>
+                    <td{cls}>{d}</td>
+                    <td style="color: #9aa5b5;">{s['Team']}</td>
+                    <td style="text-align: right; font-weight: bold;">{s['Punkte']}</td>
+                    <td style="text-align: right;">{s['Siege']}</td>
+                    <td style="text-align: right;">{s['Podien']}</td>
+                    <td style="text-align: right; color: #ba68c8;">{s['Fastest Laps']}</td>
+                    <td style="text-align: right; color: #e57373;">{s['DNFs']}</td>
+                </tr>
+            """
+        html_drivers += "</tbody></table>"
+        st.markdown(html_drivers, unsafe_allow_html=True)
+
+    with col_constructors:
+        st.subheader("Konstrukteurswertung")
+        sorted_teams = sorted(
+            constructor_points.items(), key=lambda x: x[1], reverse=True
+        )
+        html_teams = """
+        <table class="f1-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">#</th>
+                    <th>Team</th>
+                    <th style="text-align: right;">Punkte</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
+        for rank, (team, pts) in enumerate(sorted_teams, start=1):
+            html_teams += f"""
+                <tr>
+                    <td><b>{rank}</b></td>
+                    <td>{team}</td>
+                    <td style="text-align: right; font-weight: bold;">{pts}</td>
+                </tr>
+            """
+        html_teams += "</tbody></table>"
+        st.markdown(html_teams, unsafe_allow_html=True)
+
+# --- TAB 2: RENNERGEBNISSE ---
 with tab_matrix:
-    st.subheader("🏁 Komplette Ergebnis-Matrix (P1 - P22 & DNFs)")
-    st.caption(
-        "Legende: 🟨 P1 | 🥈 P2 | 🥉 P3 | 🟩 P4-P10 (Punkte) | ⬜ P11-P22 | 🟥 DNF | 🟪 Schnellste Runde"
-    )
-
+    st.subheader("Rennergebnis-Matrix")
     if not data["races"]:
-        st.info("Noch keine Rennen erfasst. Trage ein Rennen ein, um die Matrix zu füllen.")
+        st.info("Noch keine Rennen erfasst.")
     else:
         race_rows = []
         for r in data["races"]:
@@ -355,7 +388,11 @@ with tab_matrix:
                 return "background-color: #1a1e26; color: #888888; text-align: center;"
             return "text-align: center;"
 
-        st.dataframe(df_matrix.style.applymap(color_cells), use_container_width=True, height=600)
+        st.dataframe(
+            df_matrix.style.applymap(color_cells),
+            use_container_width=True,
+            height=580,
+        )
 
 # --- TAB 3: TEAM-DUELL ---
 with tab_duel:
@@ -364,20 +401,29 @@ with tab_duel:
     t_pts = driver_stats["Tim"]["Punkte"]
 
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Punkte", f"{l_pts} : {t_pts}", delta=f"{l_pts - t_pts} Diff")
-    m2.metric("Siege", f"{driver_stats['Lucas']['Siege']} : {driver_stats['Tim']['Siege']}")
-    m3.metric("Podien", f"{driver_stats['Lucas']['Podien']} : {driver_stats['Tim']['Podien']}")
-    m4.metric("Schnellste Runden", f"{driver_stats['Lucas']['Fastest Laps']} : {driver_stats['Tim']['Fastest Laps']}")
+    m1.metric("Punkte", f"{l_pts} : {t_pts}", delta=f"{l_pts - t_pts} Differenz")
+    m2.metric(
+        "Siege",
+        f"{driver_stats['Lucas']['Siege']} : {driver_stats['Tim']['Siege']}",
+    )
+    m3.metric(
+        "Podien",
+        f"{driver_stats['Lucas']['Podien']} : {driver_stats['Tim']['Podien']}",
+    )
+    m4.metric(
+        "Schnellste Runden",
+        f"{driver_stats['Lucas']['Fastest Laps']} : {driver_stats['Tim']['Fastest Laps']}",
+    )
 
     st.write(
         f"**Teams:** Lucas fährt für **{data['lucas']['current_team']}** | Tim fährt für **{data['tim']['current_team']}**"
     )
 
-# --- TAB 4: ERFASSUNG P1 BIS P22 ---
+# --- TAB 4: ERFASSUNG ---
 with tab_input:
     completed = len(data["races"])
     if completed >= len(SEASON_2026_CALENDAR):
-        st.success("🎉 Die Saison ist beendet! Starte im Fahrermarkt eine neue Saison.")
+        st.success("Saison ist beendet.")
     else:
         current_track = SEASON_2026_CALENDAR[completed]
 
@@ -395,22 +441,25 @@ with tab_input:
         all_drivers_list = sorted(list(active_drivers.keys()))
 
         with st.form("full_grid_form"):
-            st.write("### 🏁 Zieldurchfahrt (Platz 1 bis 22)")
-            st.caption(
-                "Wähle das genaue Klassement. Unten kannst du optional Fahrer auswählen, die ausgefallen sind (DNF)."
-            )
-
-            # 4 Spalten für alle 22 Plätze
+            st.write("### Zieldurchfahrt Platz 1 bis 22")
             c1, c2, c3, c4 = st.columns(4)
             full_results = []
 
             for i in range(1, 23):
-                col = c1 if i <= 6 else (c2 if i <= 12 else (c3 if i <= 18 else c4))
+                col = (
+                    c1
+                    if i <= 6
+                    else (c2 if i <= 12 else (c3 if i <= 18 else c4))
+                )
                 with col:
                     default_d = (
                         "Lucas"
                         if i == 1
-                        else ("Tim" if i == 2 else all_drivers_list[(i - 1) % len(all_drivers_list)])
+                        else (
+                            "Tim"
+                            if i == 2
+                            else all_drivers_list[(i - 1) % len(all_drivers_list)]
+                        )
                     )
                     idx = (
                         all_drivers_list.index(default_d)
@@ -418,34 +467,37 @@ with tab_input:
                         else 0
                     )
                     picked = st.selectbox(
-                        f"Platz {i}", all_drivers_list, index=idx, key=f"grid_p_{i}"
+                        f"Platz {i}",
+                        all_drivers_list,
+                        index=idx,
+                        key=f"grid_p_{i}",
                     )
                     full_results.append(picked)
 
             st.markdown("---")
-            st.write("### 💥 Ausfälle (DNF)")
+            st.write("### Ausfälle")
             dnf_picks = st.multiselect(
-                "Fahrer auswählen, die nicht ins Ziel kamen (werden als DNF gewertet):",
+                "Fahrer auswählen, die nicht ins Ziel kamen (DNF):",
                 all_drivers_list,
             )
 
             st.markdown("---")
             fl_pick = st.selectbox(
-                "🟣 Schnellste Rennrunde (+1 Punkt in den Top 10)",
+                "🟣 Schnellste Rennrunde",
                 ["Keine"] + [d for d in full_results if d not in dnf_picks],
             )
 
             submit = st.form_submit_button(
-                "💾 Grand Prix speichern & weiter",
+                "Grand Prix speichern & weiter",
                 type="primary",
                 use_container_width=True,
             )
 
             if submit:
-                # Prüfen auf doppelte Fahrer
-                valid_finishers = [d for d in full_results if d not in dnf_picks]
                 if len(set(full_results)) != 22:
-                    st.error("Fehler: Jeder der 22 Plätze muss mit einem eindeutigen Fahrer belegt sein!")
+                    st.error(
+                        "Fehler: Jeder der 22 Plätze muss eindeutig belegt sein."
+                    )
                 else:
                     data["races"].append(
                         {
@@ -457,23 +509,26 @@ with tab_input:
                         }
                     )
                     save_data(data)
-                    st.success(f"{current_track} gespeichert!")
                     st.rerun()
 
 # --- TAB 5: FAHRERMARKT ---
 with tab_market:
-    st.subheader("Fahrermarkt & Transfers")
+    st.subheader("Fahrermarkt")
     col_tl, col_tt = st.columns(2)
 
     with col_tl:
-        st.markdown(f"### Lucas (Aktuell: **{data['lucas']['current_team']}**)")
+        st.markdown(f"### Lucas (Aktuell: {data['lucas']['current_team']})")
         if data["lucas"]["transfers_used"] >= 1:
-            st.warning("🔒 Wechsel-Joker für diese Saison verbraucht.")
+            st.warning("Wechsel-Joker für diese Saison verbraucht.")
         else:
             with st.form("transfer_lucas"):
                 new_team = st.selectbox(
                     "Neues Team",
-                    [t for t in OFFICIAL_GRID.keys() if t != data["lucas"]["current_team"]],
+                    [
+                        t
+                        for t in OFFICIAL_GRID.keys()
+                        if t != data["lucas"]["current_team"]
+                    ],
                 )
                 replaced = st.selectbox("Wen ersetzt du?", OFFICIAL_GRID[new_team])
                 if st.form_submit_button("Zu diesem Team wechseln"):
@@ -484,14 +539,18 @@ with tab_market:
                     st.rerun()
 
     with col_tt:
-        st.markdown(f"### Tim (Aktuell: **{data['tim']['current_team']}**)")
+        st.markdown(f"### Tim (Aktuell: {data['tim']['current_team']})")
         if data["tim"]["transfers_used"] >= 1:
-            st.warning("🔒 Wechsel-Joker für diese Saison verbraucht.")
+            st.warning("Wechsel-Joker für diese Saison verbraucht.")
         else:
             with st.form("transfer_tim"):
                 new_team = st.selectbox(
                     "Neues Team",
-                    [t for t in OFFICIAL_GRID.keys() if t != data["tim"]["current_team"]],
+                    [
+                        t
+                        for t in OFFICIAL_GRID.keys()
+                        if t != data["tim"]["current_team"]
+                    ],
                 )
                 replaced = st.selectbox("Wen ersetzt du?", OFFICIAL_GRID[new_team])
                 if st.form_submit_button("Zu diesem Team wechseln"):
@@ -503,7 +562,7 @@ with tab_market:
 
 # --- TAB 6: KALENDER & HISTORIE ---
 with tab_history:
-    st.subheader("Saisonkalender & Ergebnisse")
+    st.subheader("Saisonkalender")
     for idx, tr in enumerate(SEASON_2026_CALENDAR):
         if idx < len(data["races"]):
             r = data["races"][idx]
