@@ -66,7 +66,7 @@ OFFICIAL_GRID = {
     "Mercedes": ["George Russell", "Kimi Antonelli"],
     "Aston Martin": ["Fernando Alonso", "Lance Stroll"],
     "Williams": ["Carlos Sainz", "Alex Albon"],
-    "Alpine": ["Pierre Gasly", "Jack Doohan"],
+    "Alpine": ["Pierre Gasly", "Franco Colapinto"],
     "RB": ["Yuki Tsunoda", "Isack Hadjar"],
     "Sauber / Audi": ["Nico Hülkenberg", "Gabriel Bortoleto"],
     "Haas": ["Esteban Ocon", "Oliver Bearman"],
@@ -134,18 +134,16 @@ def save_available_saves(saves_list):
 
 all_saves = get_available_saves()
 
-# State für Reset-Bestätigung initialisieren
 if "confirm_delete" not in st.session_state:
     st.session_state.confirm_delete = False
 
-# Seitenleiste: Spielstand-Auswahl & Reset-Sicherheitsabfrage
 with st.sidebar:
     st.markdown("### 💾 Spielstand-Manager")
     selected_save = st.selectbox("Aktiver Spielstand / Saison:", all_saves)
 
     DATA_FILE = f"save_{selected_save.replace(' ', '_').replace('/', '_')}.json"
 
-    with st.expander("➕ Neuer Spielstand (z. B. F1 27)"):
+    with st.expander("➕ Neuer Spielstand"):
         new_save_name = st.text_input("Name für neue Saison/Karriere:")
         if st.button("Erstellen"):
             if new_save_name and new_save_name not in all_saves:
@@ -168,7 +166,6 @@ with st.sidebar:
             use_container_width=True,
         )
 
-    # 2-Stufen-Löschung mit Bestätigungsmenü
     if not st.session_state.confirm_delete:
         if st.button("💣 Aktiven Spielstand löschen", use_container_width=True):
             st.session_state.confirm_delete = True
@@ -178,23 +175,19 @@ with st.sidebar:
             """
             <div class="danger-confirm-box">
                 <b style="color: #ff4b4b;">⚠️ BIST DU DIR SICHER?</b><br>
-                <small>Alle Daten und Rennen dieses Spielstands werden unwiderruflich gelöscht!</small>
+                <small>Alle Daten dieses Spielstands werden unwiderruflich gelöscht!</small>
             </div>
             """,
             unsafe_allow_html=True,
         )
         col_yes, col_no = st.columns(2)
         with col_yes:
-            # Roter primärer Bestätigungs-Button
-            if st.button(
-                "Ja, löschen", type="primary", use_container_width=True
-            ):
+            if st.button("Ja, löschen", type="primary", use_container_width=True):
                 if os.path.exists(DATA_FILE):
                     os.remove(DATA_FILE)
                 st.session_state.confirm_delete = False
                 st.rerun()
         with col_no:
-            # Neutraler Abbruch-Button
             if st.button("Nein, abbrechen", use_container_width=True):
                 st.session_state.confirm_delete = False
                 st.rerun()
@@ -225,51 +218,58 @@ st.markdown(
 )
 
 # ----------------------------------------------------
-# 1. SETUP
+# 1. SETUP (JETZT MIT DIREKT DYNAMISCHER FAHRERAUSWAHL)
 # ----------------------------------------------------
 if not data.get("career_started", False):
     st.subheader(f"🏁 Cockpit-Setup für {selected_save}")
-    with st.form("setup_form"):
-        col_l, col_t = st.columns(2)
-        teams = sorted(list(OFFICIAL_GRID.keys()))
+    col_l, col_t = st.columns(2)
+    teams = sorted(list(OFFICIAL_GRID.keys()))
 
-        with col_l:
-            st.markdown("### Cockpit: Lucas")
-            lucas_team = st.selectbox("Team", teams, key="l_team")
-            lucas_seat = st.selectbox(
-                "Ersetzt Fahrer", OFFICIAL_GRID[lucas_team], key="l_seat"
-            )
+    with col_l:
+        st.markdown("### Cockpit: Lucas")
+        lucas_team = st.selectbox("Team für Lucas", teams, key="l_team_select")
+        # Aktualisiert sich sofort passend zum gewählten Team
+        lucas_seat = st.selectbox(
+            f"Welchen Fahrer ersetzt Lucas bei {lucas_team}?",
+            OFFICIAL_GRID[lucas_team],
+            key="l_seat_select",
+        )
 
-        with col_t:
-            st.markdown("### Cockpit: Tim")
-            tim_team = st.selectbox("Team", teams, key="t_team")
+    with col_t:
+        st.markdown("### Cockpit: Tim")
+        tim_team = st.selectbox("Team für Tim", teams, key="t_team_select")
+        # Falls gleiches Team: Den von Lucas gewählten Fahrer ausschließen
+        if tim_team == lucas_team:
             avail_tim = [d for d in OFFICIAL_GRID[tim_team] if d != lucas_seat]
-            if not avail_tim:
-                avail_tim = OFFICIAL_GRID[tim_team]
-            tim_seat = st.selectbox(
-                "Ersetzt Fahrer", avail_tim, key="t_seat"
-            )
+        else:
+            avail_tim = OFFICIAL_GRID[tim_team]
 
-        if st.form_submit_button(
-            "Saison starten", type="primary", use_container_width=True
-        ):
-            if lucas_team == tim_team and lucas_seat == tim_seat:
-                st.error("Ihr könnt nicht denselben Fahrer im selben Team ersetzen.")
-            else:
-                data["career_started"] = True
-                data["lucas"] = {
-                    "current_team": lucas_team,
-                    "replaces": lucas_seat,
-                    "transfers_used": 0,
-                }
-                data["tim"] = {
-                    "current_team": tim_team,
-                    "replaces": tim_seat,
-                    "transfers_used": 0,
-                }
-                data["races"] = []
-                save_data(data)
-                st.rerun()
+        tim_seat = st.selectbox(
+            f"Welchen Fahrer ersetzt Tim bei {tim_team}?",
+            avail_tim,
+            key="t_seat_select",
+        )
+
+    st.write("")
+    if st.button("🚀 Saison starten", type="primary", use_container_width=True):
+        if lucas_team == tim_team and lucas_seat == tim_seat:
+            st.error("Ihr könnt nicht denselben Fahrer im selben Team ersetzen.")
+        else:
+            data["career_started"] = True
+            data["lucas"] = {
+                "current_team": lucas_team,
+                "replaces": lucas_seat,
+                "transfers_used": 0,
+            }
+            data["tim"] = {
+                "current_team": tim_team,
+                "replaces": tim_seat,
+                "transfers_used": 0,
+            }
+            data["races"] = []
+            save_data(data)
+            st.rerun()
+
     st.stop()
 
 # ----------------------------------------------------
@@ -674,7 +674,7 @@ with tab_input:
                     save_data(data)
                     st.rerun()
 
-# --- TAB 5: FAHRERMARKT ---
+# --- TAB 5: FAHRERMARKT (DYNAMISCHE TEAM- & FAHRERWAHL) ---
 with tab_market:
     st.subheader("Fahrermarkt (Maximal 1 Wechsel pro Fahrer pro Saison)")
     col_tl, col_tt = st.columns(2)
@@ -686,22 +686,21 @@ with tab_market:
                 "🔒 Teamwechsel gesperrt: Dein Wechsel-Joker für diese Saison ist bereits aufgebraucht!"
             )
         else:
-            with st.form("transfer_lucas"):
-                new_team = st.selectbox(
-                    "Neues Team",
-                    [
-                        t
-                        for t in OFFICIAL_GRID.keys()
-                        if t != data["lucas"]["current_team"]
-                    ],
-                )
-                replaced = st.selectbox("Wen ersetzt du?", OFFICIAL_GRID[new_team])
-                if st.form_submit_button("Zu diesem Team wechseln"):
-                    data["lucas"]["current_team"] = new_team
-                    data["lucas"]["replaces"] = replaced
-                    data["lucas"]["transfers_used"] = 1
-                    save_data(data)
-                    st.rerun()
+            avail_teams_l = [
+                t for t in OFFICIAL_GRID.keys() if t != data["lucas"]["current_team"]
+            ]
+            new_team_l = st.selectbox("Neues Team für Lucas", avail_teams_l, key="m_tl")
+            replaced_l = st.selectbox(
+                f"Wen ersetzt du bei {new_team_l}?",
+                OFFICIAL_GRID[new_team_l],
+                key="m_rl",
+            )
+            if st.button("Zu diesem Team wechseln", key="btn_tl"):
+                data["lucas"]["current_team"] = new_team_l
+                data["lucas"]["replaces"] = replaced_l
+                data["lucas"]["transfers_used"] = 1
+                save_data(data)
+                st.rerun()
 
     with col_tt:
         st.markdown(f"### Tim (Aktuell: {data['tim']['current_team']})")
@@ -710,22 +709,21 @@ with tab_market:
                 "🔒 Teamwechsel gesperrt: Tims Wechsel-Joker für diese Saison ist bereits aufgebraucht!"
             )
         else:
-            with st.form("transfer_tim"):
-                new_team = st.selectbox(
-                    "Neues Team",
-                    [
-                        t
-                        for t in OFFICIAL_GRID.keys()
-                        if t != data["tim"]["current_team"]
-                    ],
-                )
-                replaced = st.selectbox("Wen ersetzt du?", OFFICIAL_GRID[new_team])
-                if st.form_submit_button("Zu diesem Team wechseln"):
-                    data["tim"]["current_team"] = new_team
-                    data["tim"]["replaces"] = replaced
-                    data["tim"]["transfers_used"] = 1
-                    save_data(data)
-                    st.rerun()
+            avail_teams_t = [
+                t for t in OFFICIAL_GRID.keys() if t != data["tim"]["current_team"]
+            ]
+            new_team_t = st.selectbox("Neues Team für Tim", avail_teams_t, key="m_tt")
+            replaced_t = st.selectbox(
+                f"Wen ersetzt du bei {new_team_t}?",
+                OFFICIAL_GRID[new_team_t],
+                key="m_rt",
+            )
+            if st.button("Zu diesem Team wechseln", key="btn_tt"):
+                data["tim"]["current_team"] = new_team_t
+                data["tim"]["replaces"] = replaced_t
+                data["tim"]["transfers_used"] = 1
+                save_data(data)
+                st.rerun()
 
     st.write("---")
     completed_races = len(data.get("races", []))
