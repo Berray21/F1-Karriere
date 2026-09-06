@@ -439,52 +439,99 @@ with tab_tables:
 
 # --- TAB 2: RENNERGEBNISSE ---
 with tab_matrix:
-    st.subheader("Rennergebnis-Matrix")
+    st.subheader("Rennergebnisse")
     if not data["races"]:
         st.info("Noch keine Rennen erfasst.")
     else:
-        race_rows = []
+        # Nur die aktuellen Top 10 Fahrer der WM
+        top_10_drivers = sorted_drivers[:10]
+
+        # Flaggen-Mapping für extrem kompakte Spaltenköpfe ohne Scrollen
+        flag_map = {
+            "Australien": "🇦🇺",
+            "China": "🇨🇳",
+            "Japan": "🇯🇵",
+            "Bahrain": "🇧🇭",
+            "Saudi-Arabien": "🇸🇦",
+            "USA (Miami)": "🇺🇸",
+            "Kanada": "🇨🇦",
+            "Monaco": "🇲🇨",
+            "Spanien (Barcelona)": "🇪🇸",
+            "Österreich": "🇦🇹",
+            "Großbritannien": "🇬🇧",
+            "Belgien": "🇧🇪",
+            "Ungarn": "🇭🇺",
+            "Niederlande": "🇳🇱",
+            "Italien (Monza)": "🇮🇹",
+            "Spanien (Madrid": "🇪🇸",
+            "Aserbaidschan": "🇦🇿",
+            "Singapur": "🇸🇬",
+            "USA (Austin)": "🇺🇸",
+            "Mexiko": "🇲🇽",
+            "Brasilien": "🇧🇷",
+            "USA (Las Vegas)": "🇺🇸",
+            "Katar": "🇶🇦",
+            "Abu Dhabi": "🇦🇪",
+        }
+
+        # Zeilen für Top 10 Fahrer aufbauen
+        table_rows = {d: {} for d in top_10_drivers}
+
         for r in data["races"]:
-            display_name = r["track"]
+            raw_track = r["track"]
+            # Flagge ermitteln
+            col_flag = "🏁"
+            for k, f in flag_map.items():
+                if k in raw_track:
+                    col_flag = f
+                    break
+            
+            # Sprint-Kennzeichnung
             if r.get("sprint_results"):
-                display_name += " ⚡"
-            row = {"Grand Prix": display_name}
+                col_flag += "⚡"
+
             fl_driver = r.get("fastest_lap")
             dnfs = r.get("dnfs", [])
 
-            for d in sorted_drivers:
+            for d in top_10_drivers:
                 if d in dnfs:
-                    row[d] = "DNF"
+                    val = "DNF"
                 elif d in r["results"]:
                     pos = r["results"].index(d) + 1
-                    txt = f"P{pos}"
+                    val = f"P{pos}"
                     if d == fl_driver:
-                        txt += " 🟣"
-                    row[d] = txt
+                        val += " 🟣"
                 else:
-                    row[d] = "-"
-            race_rows.append(row)
+                    val = "-"
+                table_rows[d][col_flag] = val
 
-        df_matrix = pd.DataFrame(race_rows).set_index("Grand Prix")
+        df_results = pd.DataFrame.from_dict(table_rows, orient="index")
+        df_results.index.name = "Fahrer"
 
-        def color_cells(val):
+        # Farb-Styling für kompakte Tabellenzellen
+        def style_results(val):
             if not isinstance(val, str) or val == "-":
-                return "color: #444; text-align: center;"
+                return "color: #555; text-align: center; padding: 4px;"
             if val == "DNF":
-                return "background-color: #8b0000; color: #ffffff; font-weight: bold; text-align: center;"
+                return "background-color: #7a0909; color: #ffffff; font-weight: bold; text-align: center; padding: 4px;"
             if "🟣" in val:
-                return "background-color: #8A2BE2; color: #ffffff; font-weight: bold; text-align: center;"
+                return "background-color: #6a1b9a; color: #ffffff; font-weight: bold; text-align: center; padding: 4px;"
             if val == "P1":
-                return "background-color: #FFD700; color: #000; font-weight: bold; text-align: center;"
+                return "background-color: #d4af37; color: #000000; font-weight: bold; text-align: center; padding: 4px;"
             if val == "P2":
-                return "background-color: #C0C0C0; color: #000; font-weight: bold; text-align: center;"
+                return "background-color: #a8a8a8; color: #000000; font-weight: bold; text-align: center; padding: 4px;"
             if val == "P3":
-                return "background-color: #CD7F32; color: #fff; font-weight: bold; text-align: center;"
-            if any(val == f"P{i}" for i in range(4, 11)):
-                return "background-color: #1e4d2b; color: #81c784; font-weight: 500; text-align: center;"
-            if any(val == f"P{i}" for i in range(11, 23)):
-                return "background-color: #1a1e26; color: #888888; text-align: center;"
-            return "text-align: center;"
+                return "background-color: #b06527; color: #ffffff; font-weight: bold; text-align: center; padding: 4px;"
+            if any(val.startswith(f"P{i}") for i in range(4, 11)):
+                return "background-color: #1e4d2b; color: #81c784; font-weight: 500; text-align: center; padding: 4px;"
+            return "background-color: #1a1e26; color: #777777; text-align: center; padding: 4px;"
+
+        if hasattr(df_results.style, "map"):
+            styled = df_results.style.map(style_results)
+        else:
+            styled = df_results.style.applymap(style_results)
+
+        st.table(styled)
 
      # Kompatibel mit allen Pandas-Versionen:
         if hasattr(df_matrix.style, "map"):
