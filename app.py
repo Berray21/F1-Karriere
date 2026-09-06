@@ -89,33 +89,34 @@ TEAM_TINTS = {
     "Cadillac": "rgba(218, 165, 32, 0.18)",
 }
 
-# Offizieller F1-Rennkalender 2026 (Exakt nach deiner Reihenfolge)
+# 24 Rennen in deiner exakten Reihenfolge
 SEASON_2026_CALENDAR = [
-    {"name": "🇦🇺 1. Australien (Melbourne)", "sprint": False},
-    {"name": "🇨🇳 2. China (Shanghai)", "sprint": True},
-    {"name": "🇯🇵 3. Japan (Suzuka)", "sprint": False},
-    {"name": "🇧🇭 4. Bahrain (Sakhir)", "sprint": False},
-    {"name": "🇸🇦 5. Saudi-Arabien (Dschidda)", "sprint": False},
-    {"name": "🇺🇸 6. USA (Miami)", "sprint": True},
-    {"name": "🇨🇦 7. Kanada (Montreal)", "sprint": True},
-    {"name": "🇲🇨 8. Monaco (Monte Carlo)", "sprint": False},
-    {"name": "🇪🇸 9. Spanien (Barcelona)", "sprint": False},
-    {"name": "🇦🇹 10. Österreich (Spielberg)", "sprint": False},
-    {"name": "🇬🇧 11. Großbritannien (Silverstone)", "sprint": True},
-    {"name": "🇧🇪 12. Belgien (Spa-Francorchamps)", "sprint": False},
-    {"name": "🇭🇺 13. Ungarn (Budapest)", "sprint": False},
-    {"name": "🇳🇱 14. Niederlande (Zandvoort)", "sprint": True},
-    {"name": "🇮🇹 15. Italien (Monza)", "sprint": False},
-    {"name": "🇪🇸 16. Spanien (Madrid - IFEMA)", "sprint": False},
-    {"name": "🇦🇿 17. Aserbaidschan (Baku)", "sprint": False},
-    {"name": "🇸🇬 18. Singapur (Marina Bay)", "sprint": True},
-    {"name": "🇺🇸 19. USA (Austin)", "sprint": False},
-    {"name": "🇲🇽 20. Mexiko (Mexiko-Stadt)", "sprint": False},
-    {"name": "🇧🇷 21. Brasilien (São Paulo)", "sprint": False},
-    {"name": "🇺🇸 22. USA (Las Vegas)", "sprint": False},
-    {"name": "🇶🇦 23. Katar (Lusail)", "sprint": False},
-    {"name": "🇦🇪 24. Abu Dhabi (Yas Marina)", "sprint": False},
+    {"name": "🇦🇺 1. Australien (Melbourne)", "sprint": False, "code": "au"},
+    {"name": "🇨🇳 2. China (Shanghai)", "sprint": True, "code": "cn"},
+    {"name": "🇯🇵 3. Japan (Suzuka)", "sprint": False, "code": "jp"},
+    {"name": "🇧🇭 4. Bahrain (Sakhir)", "sprint": False, "code": "bh"},
+    {"name": "🇸🇦 5. Saudi-Arabien (Dschidda)", "sprint": False, "code": "sa"},
+    {"name": "🇺🇸 6. USA (Miami)", "sprint": True, "code": "us"},
+    {"name": "🇨🇦 7. Kanada (Montreal)", "sprint": True, "code": "ca"},
+    {"name": "🇲🇨 8. Monaco (Monte Carlo)", "sprint": False, "code": "mc"},
+    {"name": "🇪🇸 9. Spanien (Barcelona)", "sprint": False, "code": "es"},
+    {"name": "🇦🇹 10. Österreich (Spielberg)", "sprint": False, "code": "at"},
+    {"name": "🇬🇧 11. Großbritannien (Silverstone)", "sprint": True, "code": "gb"},
+    {"name": "🇧🇪 12. Belgien (Spa-Francorchamps)", "sprint": False, "code": "be"},
+    {"name": "🇭🇺 13. Ungarn (Budapest)", "sprint": False, "code": "hu"},
+    {"name": "🇳🇱 14. Niederlande (Zandvoort)", "sprint": True, "code": "nl"},
+    {"name": "🇮🇹 15. Italien (Monza)", "sprint": False, "code": "it"},
+    {"name": "🇪🇸 16. Spanien (Madrid - IFEMA)", "sprint": False, "code": "es"},
+    {"name": "🇦🇿 17. Aserbaidschan (Baku)", "sprint": False, "code": "az"},
+    {"name": "🇸🇬 18. Singapur (Marina Bay)", "sprint": True, "code": "sg"},
+    {"name": "🇺🇸 19. USA (Austin)", "sprint": False, "code": "us"},
+    {"name": "🇲🇽 20. Mexiko (Mexiko-Stadt)", "sprint": False, "code": "mx"},
+    {"name": "🇧🇷 21. Brasilien (São Paulo)", "sprint": False, "code": "br"},
+    {"name": "🇺🇸 22. USA (Las Vegas)", "sprint": False, "code": "us"},
+    {"name": "🇶🇦 23. Katar (Lusail)", "sprint": False, "code": "qa"},
+    {"name": "🇦🇪 24. Abu Dhabi (Yas Marina)", "sprint": False, "code": "ae"},
 ]
+
 # ----------------------------------------------------
 # SAVEGAME- & PROFILE-VERWALTUNG
 # ----------------------------------------------------
@@ -305,7 +306,6 @@ for race in data["races"]:
     fl = race.get("fastest_lap")
     race_teams = race.get("driver_teams", active_drivers)
 
-    # 1. Sprint-Punkte einrechnen (falls vorhanden)
     sprint_res = race.get("sprint_results")
     if sprint_res:
         for pos, driver in enumerate(sprint_res, start=1):
@@ -318,7 +318,6 @@ for race in data["races"]:
                 if pos == 1:
                     driver_stats[driver]["Sprint-Siege"] += 1
 
-    # 2. Schnellste Runde im Hauptrennen (+1 Punkt in Top 10)
     if fl and fl in driver_stats and fl in res[:10]:
         driver_stats[fl]["Fastest Laps"] += 1
         driver_stats[fl]["Punkte"] += 1
@@ -326,12 +325,10 @@ for race in data["races"]:
         if t:
             constructor_points[t] += 1
 
-    # 3. DNFs im Hauptrennen
     for dnf_driver in dnfs:
         if dnf_driver in driver_stats:
             driver_stats[dnf_driver]["DNFs"] += 1
 
-    # 4. Hauptrennen-Punkte
     for pos, driver in enumerate(res, start=1):
         if driver in driver_stats:
             pts = MAIN_POINTS.get(pos, 0)
@@ -437,42 +434,12 @@ with tab_tables:
         )
         st.table(styled_teams)
 
-# --- TAB 2: RENNERGEBNISSE ---
+# --- TAB 2: RENNERGEBNISSE (ALLE 24 RENNEN & TOP-10-FAHRER) ---
 with tab_matrix:
     st.subheader("Rennergebnisse")
 
-    # Top 10 Fahrer der Fahrerwertung
     top_10 = sorted_drivers[:10]
 
-    # ISO-2 Codes für gestochen scharfe Vektorflaggen (funktioniert auch auf Windows)
-    FLAG_CODES = [
-        ("au", False),  # 1. Australien
-        ("cn", True),  # 2. China ⚡
-        ("jp", False),  # 3. Japan
-        ("bh", False),  # 4. Bahrain
-        ("sa", False),  # 5. Saudi-Arabien
-        ("us", True),  # 6. Miami ⚡
-        ("ca", True),  # 7. Kanada ⚡
-        ("mc", False),  # 8. Monaco
-        ("es", False),  # 9. Barcelona
-        ("at", False),  # 10. Österreich
-        ("gb", True),  # 11. Silverstone ⚡
-        ("be", False),  # 12. Spa
-        ("hu", False),  # 13. Ungarn
-        ("nl", True),  # 14. Zandvoort ⚡
-        ("it", False),  # 15. Monza
-        ("es", False),  # 16. Madrid
-        ("az", False),  # 17. Baku
-        ("sg", True),  # 18. Singapur ⚡
-        ("us", False),  # 19. Austin
-        ("mx", False),  # 20. Mexiko
-        ("br", False),  # 21. São Paulo
-        ("us", False),  # 22. Las Vegas
-        ("qa", False),  # 23. Katar
-        ("ae", False),  # 24. Abu Dhabi
-    ]
-
-    # HTML-Header: Fahrer-Spalte + alle 24 Rennen mit Flaggen-Bildern
     header_html = """
     <div style="overflow-x: auto; padding-bottom: 10px;">
     <table style="border-collapse: separate; border-spacing: 3px; width: 100%; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
@@ -481,10 +448,11 @@ with tab_matrix:
                 <th style="text-align: left; padding: 4px 8px; color: #8c96a5; font-size: 0.8rem; min-width: 110px;">FAHRER</th>
     """
 
-    for idx, (code, is_sprint) in enumerate(FLAG_CODES):
+    for event in SEASON_2026_CALENDAR:
+        code = event["code"]
         sprint_badge = (
             "<span style='color: #ffd700; font-size: 9px;'>⚡</span>"
-            if is_sprint
+            if event["sprint"]
             else ""
         )
         header_html += f"""
@@ -495,7 +463,6 @@ with tab_matrix:
         """
     header_html += "</tr></thead><tbody>"
 
-    # Farb- und Style-Definition für die kompakten Quadrate
     def get_badge(driver, race_idx):
         if race_idx >= len(data["races"]):
             return '<div style="background: #151821; color: #2e3442; border-radius: 4px; height: 26px; line-height: 26px; font-size: 11px;">·</div>'
@@ -534,7 +501,6 @@ with tab_matrix:
 
         return '<div style="background: #151821; color: #2e3442; border-radius: 4px; height: 26px; line-height: 26px; font-size: 11px;">-</div>'
 
-    # Zeilen für die Top 10 Fahrer rendern
     for d in top_10:
         d_color = "#f1f1f1"
         if d == "Lucas":
@@ -548,25 +514,13 @@ with tab_matrix:
                 {d}
             </td>
         """
-        for r_idx in range(24):
+        for r_idx in range(len(SEASON_2026_CALENDAR)):
             header_html += f"<td>{get_badge(d, r_idx)}</td>"
 
         header_html += "</tr>"
 
     header_html += "</tbody></table></div>"
     st.markdown(header_html, unsafe_allow_html=True)
-
-     # Kompatibel mit allen Pandas-Versionen:
-        if hasattr(df_matrix.style, "map"):
-            styled_matrix = df_matrix.style.map(color_cells)
-        else:
-            styled_matrix = df_matrix.style.applymap(color_cells)
-
-        st.dataframe(
-            styled_matrix,
-            use_container_width=True,
-            height=580,
-        )
 
 # --- TAB 3: HEAD-TO-HEAD DUELL ---
 with tab_duel:
@@ -692,7 +646,6 @@ with tab_input:
         track_title = current_event["name"]
         is_sprint_weekend = current_event["sprint"]
 
-        # Prüfen, ob für diesen Grand Prix der Sprint schon erledigt ist
         sprint_done = False
         if "pending_sprint" in data and data["pending_sprint"].get("track") == track_title:
             sprint_done = True
@@ -710,7 +663,6 @@ with tab_input:
 
         all_drivers_list = sorted(list(active_drivers.keys()))
 
-        # SCHRITT A: SPRINT ERFASSEN
         if is_sprint_weekend and not sprint_done:
             st.info("⚡ ZUERST: SPRINT-RENNEN ERFASSEN (Punkte für P1 bis P8)")
             with st.form("sprint_form"):
@@ -754,7 +706,6 @@ with tab_input:
                         st.success("Sprint gewertet! Jetzt Hauptrennen eintragen.")
                         st.rerun()
 
-        # SCHRITT B: HAUPTRENNEN ERFASSEN
         else:
             if is_sprint_weekend:
                 st.success("✅ Sprint gewertet! Jetzt das Hauptrennen erfassen:")
@@ -826,7 +777,6 @@ with tab_input:
                             "driver_teams": dict(active_drivers),
                         }
 
-                        # Sprint-Ergebnisse anheften, falls vorhanden
                         if is_sprint_weekend and "pending_sprint" in data:
                             race_entry["sprint_results"] = data["pending_sprint"]["results"]
                             del data["pending_sprint"]
