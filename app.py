@@ -440,98 +440,121 @@ with tab_tables:
 # --- TAB 2: RENNERGEBNISSE ---
 with tab_matrix:
     st.subheader("Rennergebnisse")
-    if not data["races"]:
-        st.info("Noch keine Rennen erfasst.")
-    else:
-        # Nur die aktuellen Top 10 Fahrer der WM
-        top_10_drivers = sorted_drivers[:10]
 
-        # Flaggen-Mapping für extrem kompakte Spaltenköpfe ohne Scrollen
-        flag_map = {
-            "Australien": "🇦🇺",
-            "China": "🇨🇳",
-            "Japan": "🇯🇵",
-            "Bahrain": "🇧🇭",
-            "Saudi-Arabien": "🇸🇦",
-            "USA (Miami)": "🇺🇸",
-            "Kanada": "🇨🇦",
-            "Monaco": "🇲🇨",
-            "Spanien (Barcelona)": "🇪🇸",
-            "Österreich": "🇦🇹",
-            "Großbritannien": "🇬🇧",
-            "Belgien": "🇧🇪",
-            "Ungarn": "🇭🇺",
-            "Niederlande": "🇳🇱",
-            "Italien (Monza)": "🇮🇹",
-            "Spanien (Madrid": "🇪🇸",
-            "Aserbaidschan": "🇦🇿",
-            "Singapur": "🇸🇬",
-            "USA (Austin)": "🇺🇸",
-            "Mexiko": "🇲🇽",
-            "Brasilien": "🇧🇷",
-            "USA (Las Vegas)": "🇺🇸",
-            "Katar": "🇶🇦",
-            "Abu Dhabi": "🇦🇪",
-        }
+    # Top 10 Fahrer der Fahrerwertung
+    top_10 = sorted_drivers[:10]
 
-        # Zeilen für Top 10 Fahrer aufbauen
-        table_rows = {d: {} for d in top_10_drivers}
+    # ISO-2 Codes für gestochen scharfe Vektorflaggen (funktioniert auch auf Windows)
+    FLAG_CODES = [
+        ("au", False),  # 1. Australien
+        ("cn", True),  # 2. China ⚡
+        ("jp", False),  # 3. Japan
+        ("bh", False),  # 4. Bahrain
+        ("sa", False),  # 5. Saudi-Arabien
+        ("us", True),  # 6. Miami ⚡
+        ("ca", True),  # 7. Kanada ⚡
+        ("mc", False),  # 8. Monaco
+        ("es", False),  # 9. Barcelona
+        ("at", False),  # 10. Österreich
+        ("gb", True),  # 11. Silverstone ⚡
+        ("be", False),  # 12. Spa
+        ("hu", False),  # 13. Ungarn
+        ("nl", True),  # 14. Zandvoort ⚡
+        ("it", False),  # 15. Monza
+        ("es", False),  # 16. Madrid
+        ("az", False),  # 17. Baku
+        ("sg", True),  # 18. Singapur ⚡
+        ("us", False),  # 19. Austin
+        ("mx", False),  # 20. Mexiko
+        ("br", False),  # 21. São Paulo
+        ("us", False),  # 22. Las Vegas
+        ("qa", False),  # 23. Katar
+        ("ae", False),  # 24. Abu Dhabi
+    ]
 
-        for r in data["races"]:
-            raw_track = r["track"]
-            # Flagge ermitteln
-            col_flag = "🏁"
-            for k, f in flag_map.items():
-                if k in raw_track:
-                    col_flag = f
-                    break
-            
-            # Sprint-Kennzeichnung
-            if r.get("sprint_results"):
-                col_flag += "⚡"
+    # HTML-Header: Fahrer-Spalte + alle 24 Rennen mit Flaggen-Bildern
+    header_html = """
+    <div style="overflow-x: auto; padding-bottom: 10px;">
+    <table style="border-collapse: separate; border-spacing: 3px; width: 100%; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+        <thead>
+            <tr style="background: transparent;">
+                <th style="text-align: left; padding: 4px 8px; color: #8c96a5; font-size: 0.8rem; min-width: 110px;">FAHRER</th>
+    """
 
-            fl_driver = r.get("fastest_lap")
-            dnfs = r.get("dnfs", [])
+    for idx, (code, is_sprint) in enumerate(FLAG_CODES):
+        sprint_badge = (
+            "<span style='color: #ffd700; font-size: 9px;'>⚡</span>"
+            if is_sprint
+            else ""
+        )
+        header_html += f"""
+            <th style="padding: 2px; min-width: 28px; max-width: 32px;">
+                <img src="https://flagcdn.com/w40/{code}.png" width="18" height="12" style="border-radius: 2px; vertical-align: middle;" alt="{code}"><br>
+                {sprint_badge}
+            </th>
+        """
+    header_html += "</tr></thead><tbody>"
 
-            for d in top_10_drivers:
-                if d in dnfs:
-                    val = "DNF"
-                elif d in r["results"]:
-                    pos = r["results"].index(d) + 1
-                    val = f"P{pos}"
-                    if d == fl_driver:
-                        val += " 🟣"
-                else:
-                    val = "-"
-                table_rows[d][col_flag] = val
+    # Farb- und Style-Definition für die kompakten Quadrate
+    def get_badge(driver, race_idx):
+        if race_idx >= len(data["races"]):
+            return '<div style="background: #151821; color: #2e3442; border-radius: 4px; height: 26px; line-height: 26px; font-size: 11px;">·</div>'
 
-        df_results = pd.DataFrame.from_dict(table_rows, orient="index")
-        df_results.index.name = "Fahrer"
+        r = data["races"][race_idx]
+        dnfs = r.get("dnfs", [])
+        results = r.get("results", [])
+        fl = r.get("fastest_lap")
 
-        # Farb-Styling für kompakte Tabellenzellen
-        def style_results(val):
-            if not isinstance(val, str) or val == "-":
-                return "color: #555; text-align: center; padding: 4px;"
-            if val == "DNF":
-                return "background-color: #7a0909; color: #ffffff; font-weight: bold; text-align: center; padding: 4px;"
-            if "🟣" in val:
-                return "background-color: #6a1b9a; color: #ffffff; font-weight: bold; text-align: center; padding: 4px;"
-            if val == "P1":
-                return "background-color: #d4af37; color: #000000; font-weight: bold; text-align: center; padding: 4px;"
-            if val == "P2":
-                return "background-color: #a8a8a8; color: #000000; font-weight: bold; text-align: center; padding: 4px;"
-            if val == "P3":
-                return "background-color: #b06527; color: #ffffff; font-weight: bold; text-align: center; padding: 4px;"
-            if any(val.startswith(f"P{i}") for i in range(4, 11)):
-                return "background-color: #1e4d2b; color: #81c784; font-weight: 500; text-align: center; padding: 4px;"
-            return "background-color: #1a1e26; color: #777777; text-align: center; padding: 4px;"
+        if driver in dnfs:
+            return '<div style="background: #7a0909; color: #fff; font-weight: 800; border-radius: 4px; height: 26px; line-height: 26px; font-size: 9px;">DNF</div>'
 
-        if hasattr(df_results.style, "map"):
-            styled = df_results.style.map(style_results)
-        else:
-            styled = df_results.style.applymap(style_results)
+        if driver in results:
+            pos = results.index(driver) + 1
+            fl_border = (
+                "border: 2px solid #a855f7;" if driver == fl else "border: none;"
+            )
 
-        st.table(styled)
+            if pos == 1:
+                bg = "#d4af37"
+                col = "#000"
+            elif pos == 2:
+                bg = "#b0b7bd"
+                col = "#000"
+            elif pos == 3:
+                bg = "#cd7f32"
+                col = "#fff"
+            elif 4 <= pos <= 10:
+                bg = "#1e4d2b"
+                col = "#81c784"
+            else:
+                bg = "#1f2430"
+                col = "#7c8799"
+
+            return f'<div style="background: {bg}; color: {col}; font-weight: 700; border-radius: 4px; height: 26px; line-height: 26px; font-size: 11px; {fl_border}">{pos}</div>'
+
+        return '<div style="background: #151821; color: #2e3442; border-radius: 4px; height: 26px; line-height: 26px; font-size: 11px;">-</div>'
+
+    # Zeilen für die Top 10 Fahrer rendern
+    for d in top_10:
+        d_color = "#f1f1f1"
+        if d == "Lucas":
+            d_color = "#00d2be; font-weight: bold;"
+        elif d == "Tim":
+            d_color = "#ff8700; font-weight: bold;"
+
+        header_html += f"""
+        <tr>
+            <td style="text-align: left; padding: 3px 6px; font-size: 0.85rem; color: {d_color}; white-space: nowrap;">
+                {d}
+            </td>
+        """
+        for r_idx in range(24):
+            header_html += f"<td>{get_badge(d, r_idx)}</td>"
+
+        header_html += "</tr>"
+
+    header_html += "</tbody></table></div>"
+    st.markdown(header_html, unsafe_allow_html=True)
 
      # Kompatibel mit allen Pandas-Versionen:
         if hasattr(df_matrix.style, "map"):
