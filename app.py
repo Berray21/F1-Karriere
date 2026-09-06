@@ -434,73 +434,135 @@ with tab_tables:
         )
         st.table(styled_teams)
 
-# --- TAB 2: RENNERGEBNISSE (ALLE 24 RENNEN GARANTIERT) ---
+# --- TAB 2: RENNERGEBNISSE (PERFEKTE QUADRATISCHE KACHELN) ---
 with tab_matrix:
     st.subheader("Rennergebnisse")
 
     top_10 = sorted_drivers[:10]
 
-    # Eindeutige Spaltenköpfe mit Renn-Nummer + Flagge (verhindert das Verschlucken doppelter Flaggen wie US/ES)
-    cols = []
+    # Eindeutige Flaggen-Icons für alle 24 Rennen
+    cols_meta = []
     for idx, ev in enumerate(SEASON_2026_CALENDAR, start=1):
         flag = ev["name"].split()[0]
         sprint_mark = "⚡" if ev["sprint"] else ""
-        cols.append(f"{idx}.{flag}{sprint_mark}")
+        cols_meta.append((idx, f"{flag}{sprint_mark}"))
 
-    rows = []
-    for d in top_10:
-        row = {"Fahrer": d}
-        for r_idx, col_name in enumerate(cols):
-            if r_idx < len(data["races"]):
-                r = data["races"][r_idx]
-                dnfs = r.get("dnfs", [])
-                results = r.get("results", [])
-                fl = r.get("fastest_lap")
+    # HTML-Tabelle aufbauen
+    html = """
+    <style>
+        .res-table {
+            border-collapse: separate;
+            border-spacing: 4px;
+            margin-top: 10px;
+        }
+        .res-table th {
+            text-align: center;
+            font-size: 11px;
+            color: #8c96a5;
+            padding: 2px;
+            width: 32px;
+            min-width: 32px;
+            max-width: 32px;
+            line-height: 1.2;
+        }
+        .res-table td {
+            padding: 0;
+            margin: 0;
+            width: 32px;
+            min-width: 32px;
+            max-width: 32px;
+            height: 32px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .res-cell {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            box-sizing: border-box;
+        }
+        .res-driver-name {
+            min-width: 110px;
+            max-width: 140px;
+            text-align: left !important;
+            padding-right: 12px !important;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+    <div style="overflow-x: auto; padding-bottom: 12px;">
+    <table class="res-table">
+        <thead>
+            <tr>
+                <th class="res-driver-name" style="color: #8c96a5; font-weight: 700; font-size: 11px;">FAHRER</th>
+    """
 
-                if d in dnfs:
-                    val = "DNF"
-                elif d in results:
-                    pos = results.index(d) + 1
-                    val = f"{pos} 🟣" if d == fl else f"{pos}"
-                else:
-                    val = "-"
+    for idx, flag_str in cols_meta:
+        html += f"""
+            <th>
+                <span style="font-size: 9px; opacity: 0.7;">{idx}</span><br>
+                <span style="font-size: 14px;">{flag_str}</span>
+            </th>
+        """
+
+    html += "</tr></thead><tbody>"
+
+    def get_square(driver, r_idx):
+        if r_idx >= len(data["races"]):
+            return '<div class="res-cell" style="background: #141822; color: #2e3545;">·</div>'
+
+        r = data["races"][r_idx]
+        dnfs = r.get("dnfs", [])
+        results = r.get("results", [])
+        fl = r.get("fastest_lap")
+
+        if driver in dnfs:
+            return '<div class="res-cell" style="background: #7a0909; color: #ffffff; font-size: 10px;">DNF</div>'
+
+        if driver in results:
+            pos = results.index(driver) + 1
+            border_css = "border: 2px solid #a855f7;" if driver == fl else "border: none;"
+
+            if pos == 1:
+                bg, col = "#d4af37", "#000000"
+            elif pos == 2:
+                bg, col = "#b0b7bd", "#000000"
+            elif pos == 3:
+                bg, col = "#cd7f32", "#ffffff"
+            elif 4 <= pos <= 10:
+                bg, col = "#1e4d2b", "#81c784"
             else:
-                val = "·"
-            row[col_name] = val
-        rows.append(row)
+                bg, col = "#1b202c", "#8c96a5"
 
-    df_res = pd.DataFrame(rows).set_index("Fahrer")
+            return f'<div class="res-cell" style="background: {bg}; color: {col}; {border_css}">{pos}</div>'
 
-    def color_results_grid(val):
-        if not isinstance(val, str) or val in ["·", "-"]:
-            return "color: #3e4756; text-align: center;"
-        if val == "DNF":
-            return "background-color: #7a0909; color: #ffffff; font-weight: bold; text-align: center;"
-        if "🟣" in val:
-            return "background-color: #6a1b9a; color: #ffffff; font-weight: bold; text-align: center;"
-        if val == "1":
-            return "background-color: #d4af37; color: #000000; font-weight: bold; text-align: center;"
-        if val == "2":
-            return "background-color: #b0b7bd; color: #000000; font-weight: bold; text-align: center;"
-        if val == "3":
-            return "background-color: #cd7f32; color: #ffffff; font-weight: bold; text-align: center;"
-        try:
-            p_num = int(val.split()[0])
-            if 4 <= p_num <= 10:
-                return "background-color: #1e4d2b; color: #81c784; font-weight: bold; text-align: center;"
-        except ValueError:
-            pass
-        return "background-color: #1a1e26; color: #8c96a5; text-align: center;"
+        return '<div class="res-cell" style="background: #141822; color: #2e3545;">-</div>'
 
-    if hasattr(df_res.style, "map"):
-        styled_res = df_res.style.map(color_results_grid)
-    else:
-        styled_res = df_res.style.applymap(color_results_grid)
+    for d in top_10:
+        d_style = "color: #f1f1f1;"
+        if d == "Lucas":
+            d_style = "color: #00d2be; font-weight: 900;"
+        elif d == "Tim":
+            d_style = "color: #ff8700; font-weight: 900;"
 
-    st.dataframe(
-        styled_res,
-        use_container_width=True,
-        height=400,
+        html += f"""
+        <tr>
+            <td class="res-driver-name" style="{d_style}">{d}</td>
+        """
+        for r_idx in range(len(cols_meta)):
+            html += f"<td>{get_square(d, r_idx)}</td>"
+
+        html += "</tr>"
+
+    html += "</tbody></table></div>"
+    st.markdown(html, unsafe_allow_html=True)
     )
 # --- TAB 3: HEAD-TO-HEAD DUELL ---
 with tab_duel:
