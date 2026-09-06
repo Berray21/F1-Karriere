@@ -89,7 +89,7 @@ TEAM_TINTS = {
     "Cadillac": "rgba(218, 165, 32, 0.18)",
 }
 
-# 24 Rennen inkl. 6 Sprint-Events
+# 24 Rennen inkl. der 6 offiziellen Sprint-Events 2026
 SEASON_2026_CALENDAR = [
     {"name": "🇧🇭 1. Bahrain", "sprint": False},
     {"name": "🇸🇦 2. Saudi-Arabien", "sprint": False},
@@ -100,20 +100,20 @@ SEASON_2026_CALENDAR = [
     {"name": "🇮🇹 7. Imola", "sprint": False},
     {"name": "🇲🇨 8. Monaco", "sprint": False},
     {"name": "🇪🇸 9. Barcelona", "sprint": False},
-    {"name": "🇨🇦 10. Montreal", "sprint": False},
+    {"name": "🇨🇦 10. Kanada", "sprint": True},
     {"name": "🇦🇹 11. Österreich", "sprint": False},
-    {"name": "🇬🇧 12. Silverstone", "sprint": False},
-    {"name": "🇧🇪 13. Spa", "sprint": True},
+    {"name": "🇬🇧 12. Silverstone", "sprint": True},
+    {"name": "🇧🇪 13. Spa", "sprint": False},
     {"name": "🇭🇺 14. Budapest", "sprint": False},
-    {"name": "🇳🇱 15. Zandvoort", "sprint": False},
+    {"name": "🇳🇱 15. Zandvoort", "sprint": True},
     {"name": "🇮🇹 16. Monza", "sprint": False},
     {"name": "🇪🇸 17. Madrid", "sprint": False},
     {"name": "🇦🇿 18. Baku", "sprint": False},
-    {"name": "🇸🇬 19. Singapur", "sprint": False},
-    {"name": "🇺🇸 20. Austin", "sprint": True},
+    {"name": "🇸🇬 19. Singapur", "sprint": True},
+    {"name": "🇺🇸 20. Austin", "sprint": False},
     {"name": "🇲🇽 21. Mexiko", "sprint": False},
-    {"name": "🇧🇷 22. São Paulo", "sprint": True},
-    {"name": "🇶🇦 23. Katar", "sprint": True},
+    {"name": "🇧🇷 22. São Paulo", "sprint": False},
+    {"name": "🇶🇦 23. Katar", "sprint": False},
     {"name": "🇦🇪 24. Abu Dhabi", "sprint": False},
 ]
 
