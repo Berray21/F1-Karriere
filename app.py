@@ -434,94 +434,76 @@ with tab_tables:
         )
         st.table(styled_teams)
 
-# --- TAB 2: RENNERGEBNISSE (ALLE 24 RENNEN & TOP-10-FAHRER) ---
+# --- TAB 2: RENNERGEBNISSE ---
 with tab_matrix:
     st.subheader("Rennergebnisse")
 
     top_10 = sorted_drivers[:10]
 
-    header_html = """
-    <div style="overflow-x: auto; padding-bottom: 10px;">
-    <table style="border-collapse: separate; border-spacing: 3px; width: 100%; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
-        <thead>
-            <tr style="background: transparent;">
-                <th style="text-align: left; padding: 4px 8px; color: #8c96a5; font-size: 0.8rem; min-width: 110px;">FAHRER</th>
-    """
+    # Spaltenköpfe: Flagge + Sprint-Blitz
+    cols = []
+    for ev in SEASON_2026_CALENDAR:
+        flag = ev["name"].split()[0]
+        if ev["sprint"]:
+            cols.append(f"{flag}⚡")
+        else:
+            cols.append(flag)
 
-    for event in SEASON_2026_CALENDAR:
-        code = event["code"]
-        sprint_badge = (
-            "<span style='color: #ffd700; font-size: 9px;'>⚡</span>"
-            if event["sprint"]
-            else ""
-        )
-        header_html += f"""
-            <th style="padding: 2px; min-width: 28px; max-width: 32px;">
-                <img src="https://flagcdn.com/w40/{code}.png" width="18" height="12" style="border-radius: 2px; vertical-align: middle;" alt="{code}"><br>
-                {sprint_badge}
-            </th>
-        """
-    header_html += "</tr></thead><tbody>"
-
-    def get_badge(driver, race_idx):
-        if race_idx >= len(data["races"]):
-            return '<div style="background: #151821; color: #2e3442; border-radius: 4px; height: 26px; line-height: 26px; font-size: 11px;">·</div>'
-
-        r = data["races"][race_idx]
-        dnfs = r.get("dnfs", [])
-        results = r.get("results", [])
-        fl = r.get("fastest_lap")
-
-        if driver in dnfs:
-            return '<div style="background: #7a0909; color: #fff; font-weight: 800; border-radius: 4px; height: 26px; line-height: 26px; font-size: 9px;">DNF</div>'
-
-        if driver in results:
-            pos = results.index(driver) + 1
-            fl_border = (
-                "border: 2px solid #a855f7;" if driver == fl else "border: none;"
-            )
-
-            if pos == 1:
-                bg = "#d4af37"
-                col = "#000"
-            elif pos == 2:
-                bg = "#b0b7bd"
-                col = "#000"
-            elif pos == 3:
-                bg = "#cd7f32"
-                col = "#fff"
-            elif 4 <= pos <= 10:
-                bg = "#1e4d2b"
-                col = "#81c784"
-            else:
-                bg = "#1f2430"
-                col = "#7c8799"
-
-            return f'<div style="background: {bg}; color: {col}; font-weight: 700; border-radius: 4px; height: 26px; line-height: 26px; font-size: 11px; {fl_border}">{pos}</div>'
-
-        return '<div style="background: #151821; color: #2e3442; border-radius: 4px; height: 26px; line-height: 26px; font-size: 11px;">-</div>'
-
+    rows = []
     for d in top_10:
-        d_color = "#f1f1f1"
-        if d == "Lucas":
-            d_color = "#00d2be; font-weight: bold;"
-        elif d == "Tim":
-            d_color = "#ff8700; font-weight: bold;"
+        row = {"Fahrer": d}
+        for idx, col_name in enumerate(cols):
+            if idx < len(data["races"]):
+                r = data["races"][idx]
+                dnfs = r.get("dnfs", [])
+                results = r.get("results", [])
+                fl = r.get("fastest_lap")
 
-        header_html += f"""
-        <tr>
-            <td style="text-align: left; padding: 3px 6px; font-size: 0.85rem; color: {d_color}; white-space: nowrap;">
-                {d}
-            </td>
-        """
-        for r_idx in range(len(SEASON_2026_CALENDAR)):
-            header_html += f"<td>{get_badge(d, r_idx)}</td>"
+                if d in dnfs:
+                    val = "DNF"
+                elif d in results:
+                    pos = results.index(d) + 1
+                    val = f"{pos} 🟣" if d == fl else f"{pos}"
+                else:
+                    val = "-"
+            else:
+                val = "·"
+            row[col_name] = val
+        rows.append(row)
 
-        header_html += "</tr>"
+    df_res = pd.DataFrame(rows).set_index("Fahrer")
 
-    header_html += "</tbody></table></div>"
-    st.markdown(header_html, unsafe_allow_html=True)
+    def color_results_grid(val):
+        if not isinstance(val, str) or val in ["·", "-"]:
+            return "color: #3e4756; text-align: center;"
+        if val == "DNF":
+            return "background-color: #7a0909; color: #ffffff; font-weight: bold; text-align: center;"
+        if "🟣" in val:
+            return "background-color: #6a1b9a; color: #ffffff; font-weight: bold; text-align: center;"
+        if val == "1":
+            return "background-color: #d4af37; color: #000000; font-weight: bold; text-align: center;"
+        if val == "2":
+            return "background-color: #b0b7bd; color: #000000; font-weight: bold; text-align: center;"
+        if val == "3":
+            return "background-color: #cd7f32; color: #ffffff; font-weight: bold; text-align: center;"
+        try:
+            p_num = int(val.split()[0])
+            if 4 <= p_num <= 10:
+                return "background-color: #1e4d2b; color: #81c784; font-weight: bold; text-align: center;"
+        except ValueError:
+            pass
+        return "background-color: #1a1e26; color: #8c96a5; text-align: center;"
 
+    if hasattr(df_res.style, "map"):
+        styled_res = df_res.style.map(color_results_grid)
+    else:
+        styled_res = df_res.style.applymap(color_results_grid)
+
+    st.dataframe(
+        styled_res,
+        use_container_width=True,
+        height=400,
+    )
 # --- TAB 3: HEAD-TO-HEAD DUELL ---
 with tab_duel:
     l_team = active_drivers["Lucas"]
