@@ -57,9 +57,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-POINTS_SYSTEM = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}
+# Offizielle Punktesysteme
+MAIN_POINTS = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}
+SPRINT_POINTS = {1: 8, 2: 7, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1}
 
-# 11 Teams & 22 Fahrer (Offizielles 2026er Grid mit Audi & aktuellem Red-Bull-Pool)
 OFFICIAL_GRID = {
     "Ferrari": ["Charles Leclerc", "Lewis Hamilton"],
     "McLaren": ["Lando Norris", "Oscar Piastri"],
@@ -88,31 +89,32 @@ TEAM_TINTS = {
     "Cadillac": "rgba(218, 165, 32, 0.18)",
 }
 
+# 24 Rennen inkl. 6 Sprint-Events
 SEASON_2026_CALENDAR = [
-    "🇧🇭 1. Bahrain",
-    "🇸🇦 2. Saudi-Arabien",
-    "🇦🇺 3. Australien",
-    "🇯🇵 4. Japan",
-    "🇨🇳 5. China",
-    "🇺🇸 6. Miami",
-    "🇮🇹 7. Imola",
-    "🇲🇨 8. Monaco",
-    "🇪🇸 9. Barcelona",
-    "🇨🇦 10. Montreal",
-    "🇦🇹 11. Österreich",
-    "🇬🇧 12. Silverstone",
-    "🇧🇪 13. Spa",
-    "🇭🇺 14. Budapest",
-    "🇳🇱 15. Zandvoort",
-    "🇮🇹 16. Monza",
-    "🇪🇸 17. Madrid",
-    "🇦🇿 18. Baku",
-    "🇸🇬 19. Singapur",
-    "🇺🇸 20. Austin",
-    "🇲🇽 21. Mexiko",
-    "🇧🇷 22. São Paulo",
-    "🇶🇦 23. Katar",
-    "🇦🇪 24. Abu Dhabi",
+    {"name": "🇧🇭 1. Bahrain", "sprint": False},
+    {"name": "🇸🇦 2. Saudi-Arabien", "sprint": False},
+    {"name": "🇦🇺 3. Australien", "sprint": False},
+    {"name": "🇯🇵 4. Japan", "sprint": False},
+    {"name": "🇨🇳 5. China", "sprint": True},
+    {"name": "🇺🇸 6. Miami", "sprint": True},
+    {"name": "🇮🇹 7. Imola", "sprint": False},
+    {"name": "🇲🇨 8. Monaco", "sprint": False},
+    {"name": "🇪🇸 9. Barcelona", "sprint": False},
+    {"name": "🇨🇦 10. Montreal", "sprint": False},
+    {"name": "🇦🇹 11. Österreich", "sprint": False},
+    {"name": "🇬🇧 12. Silverstone", "sprint": False},
+    {"name": "🇧🇪 13. Spa", "sprint": True},
+    {"name": "🇭🇺 14. Budapest", "sprint": False},
+    {"name": "🇳🇱 15. Zandvoort", "sprint": False},
+    {"name": "🇮🇹 16. Monza", "sprint": False},
+    {"name": "🇪🇸 17. Madrid", "sprint": False},
+    {"name": "🇦🇿 18. Baku", "sprint": False},
+    {"name": "🇸🇬 19. Singapur", "sprint": False},
+    {"name": "🇺🇸 20. Austin", "sprint": True},
+    {"name": "🇲🇽 21. Mexiko", "sprint": False},
+    {"name": "🇧🇷 22. São Paulo", "sprint": True},
+    {"name": "🇶🇦 23. Katar", "sprint": True},
+    {"name": "🇦🇪 24. Abu Dhabi", "sprint": False},
 ]
 
 # ----------------------------------------------------
@@ -219,7 +221,7 @@ st.markdown(
 )
 
 # ----------------------------------------------------
-# 1. SETUP (DYNAMISCHE LIVE-AUSWAHL)
+# 1. SETUP
 # ----------------------------------------------------
 if not data.get("career_started", False):
     st.subheader(f"🏁 Cockpit-Setup für {selected_save}")
@@ -289,6 +291,7 @@ driver_stats = {
         "Siege": 0,
         "Podien": 0,
         "Top 10": 0,
+        "Sprint-Siege": 0,
         "Fastest Laps": 0,
         "DNFs": 0,
         "Team": active_drivers[d],
@@ -303,6 +306,20 @@ for race in data["races"]:
     fl = race.get("fastest_lap")
     race_teams = race.get("driver_teams", active_drivers)
 
+    # 1. Sprint-Punkte einrechnen (falls vorhanden)
+    sprint_res = race.get("sprint_results")
+    if sprint_res:
+        for pos, driver in enumerate(sprint_res, start=1):
+            if driver in driver_stats and pos in SPRINT_POINTS:
+                pts = SPRINT_POINTS[pos]
+                driver_stats[driver]["Punkte"] += pts
+                t = race_teams.get(driver, active_drivers.get(driver))
+                if t:
+                    constructor_points[t] += pts
+                if pos == 1:
+                    driver_stats[driver]["Sprint-Siege"] += 1
+
+    # 2. Schnellste Runde im Hauptrennen (+1 Punkt in Top 10)
     if fl and fl in driver_stats and fl in res[:10]:
         driver_stats[fl]["Fastest Laps"] += 1
         driver_stats[fl]["Punkte"] += 1
@@ -310,13 +327,15 @@ for race in data["races"]:
         if t:
             constructor_points[t] += 1
 
+    # 3. DNFs im Hauptrennen
     for dnf_driver in dnfs:
         if dnf_driver in driver_stats:
             driver_stats[dnf_driver]["DNFs"] += 1
 
+    # 4. Hauptrennen-Punkte
     for pos, driver in enumerate(res, start=1):
         if driver in driver_stats:
-            pts = POINTS_SYSTEM.get(pos, 0)
+            pts = MAIN_POINTS.get(pos, 0)
             driver_stats[driver]["Punkte"] += pts
             t = race_teams.get(driver, active_drivers.get(driver))
             if t:
@@ -368,6 +387,7 @@ with tab_tables:
                     "Punkte": s["Punkte"],
                     "Siege": s["Siege"],
                     "Podien": s["Podien"],
+                    "Sprint P1": s["Sprint-Siege"],
                     "FL": s["Fastest Laps"],
                     "DNF": s["DNFs"],
                 }
@@ -426,7 +446,10 @@ with tab_matrix:
     else:
         race_rows = []
         for r in data["races"]:
-            row = {"Grand Prix": r["track"]}
+            display_name = r["track"]
+            if r.get("sprint_results"):
+                display_name += " ⚡"
+            row = {"Grand Prix": display_name}
             fl_driver = r.get("fastest_lap")
             dnfs = r.get("dnfs", [])
 
@@ -570,7 +593,10 @@ with tab_duel:
         st.markdown(html_bar, unsafe_allow_html=True)
 
     display_duel_bar("WM-Punkte", s_l["Punkte"], s_t["Punkte"])
-    display_duel_bar("Rennsiege", s_l["Siege"], s_t["Siege"])
+    display_duel_bar("Grand-Prix-Siege", s_l["Siege"], s_t["Siege"])
+    display_duel_bar(
+        "Sprint-Siege", s_l["Sprint-Siege"], s_t["Sprint-Siege"]
+    )
     display_duel_bar("Podiumsplätze", s_l["Podien"], s_t["Podien"])
     display_duel_bar("Top 10 Finishes", s_l["Top 10"], s_t["Top 10"])
     display_duel_bar(
@@ -579,7 +605,7 @@ with tab_duel:
     display_duel_bar("Besserer Zieleinlauf", l_ahead, t_ahead)
     display_duel_bar("Ausfälle (DNF)", s_l["DNFs"], s_t["DNFs"])
 
-# --- TAB 4: ERFASSUNG ---
+# --- TAB 4: ERFASSUNG MIT SPRINT-UNTERSTÜTZUNG ---
 with tab_input:
     completed = len(data["races"])
     if completed >= len(SEASON_2026_CALENDAR):
@@ -587,14 +613,21 @@ with tab_input:
             "🎉 Die Saison ist vollständig beendet! Ihr könnt im Fahrermarkt die nächste Saison freischalten."
         )
     else:
-        current_track = SEASON_2026_CALENDAR[completed]
+        current_event = SEASON_2026_CALENDAR[completed]
+        track_title = current_event["name"]
+        is_sprint_weekend = current_event["sprint"]
+
+        # Prüfen, ob für diesen Grand Prix der Sprint schon erledigt ist
+        sprint_done = False
+        if "pending_sprint" in data and data["pending_sprint"].get("track") == track_title:
+            sprint_done = True
 
         st.markdown(
             f"""
             <div class="current-race-box">
                 <h3 style="margin:0; color:#e10600;">ANSTEHENDER GRAND PRIX</h3>
-                <h2 style="margin:5px 0 0 0;">{current_track}</h2>
-                <p style="margin:2px 0 0 0; opacity:0.8;">Rennen {completed + 1} von {len(SEASON_2026_CALENDAR)}</p>
+                <h2 style="margin:5px 0 0 0;">{track_title} {'⚡ [SPRINT-WOCHENENDE]' if is_sprint_weekend else ''}</h2>
+                <p style="margin:2px 0 0 0; opacity:0.8;">Runde {completed + 1} von {len(SEASON_2026_CALENDAR)}</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -602,76 +635,131 @@ with tab_input:
 
         all_drivers_list = sorted(list(active_drivers.keys()))
 
-        with st.form("full_grid_form"):
-            st.write("### Zieldurchfahrt Platz 1 bis 22")
-            c1, c2, c3, c4 = st.columns(4)
-            full_results = []
-
-            for i in range(1, 23):
-                col = (
-                    c1
-                    if i <= 6
-                    else (c2 if i <= 12 else (c3 if i <= 18 else c4))
-                )
-                with col:
-                    default_d = (
-                        "Lucas"
-                        if i == 1
-                        else (
-                            "Tim"
-                            if i == 2
-                            else all_drivers_list[(i - 1) % len(all_drivers_list)]
+        # SCHRITT A: SPRINT ERFASSEN
+        if is_sprint_weekend and not sprint_done:
+            st.info("⚡ ZUERST: SPRINT-RENNEN ERFASSEN (Punkte für P1 bis P8)")
+            with st.form("sprint_form"):
+                st.write("### Sprint Zieldurchfahrt (Top 8)")
+                sc1, sc2 = st.columns(2)
+                sprint_picks = []
+                for i in range(1, 9):
+                    col = sc1 if i <= 4 else sc2
+                    with col:
+                        def_d = (
+                            "Lucas"
+                            if i == 1
+                            else ("Tim" if i == 2 else all_drivers_list[i])
                         )
-                    )
-                    idx = (
-                        all_drivers_list.index(default_d)
-                        if default_d in all_drivers_list
-                        else 0
-                    )
-                    picked = st.selectbox(
-                        f"Platz {i}",
-                        all_drivers_list,
-                        index=idx,
-                        key=f"grid_p_{i}",
-                    )
-                    full_results.append(picked)
+                        def_idx = (
+                            all_drivers_list.index(def_d)
+                            if def_d in all_drivers_list
+                            else 0
+                        )
+                        p = st.selectbox(
+                            f"Sprint Platz {i}",
+                            all_drivers_list,
+                            index=def_idx,
+                            key=f"sp_{i}",
+                        )
+                        sprint_picks.append(p)
 
-            st.markdown("---")
-            st.write("### Ausfälle")
-            dnf_picks = st.multiselect(
-                "Fahrer auswählen, die nicht ins Ziel kamen (DNF):",
-                all_drivers_list,
-            )
+                if st.form_submit_button(
+                    "⚡ Sprint speichern & zum Hauptrennen",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    if len(set(sprint_picks)) != 8:
+                        st.error("Fehler: Fahrer dürfen nicht doppelt in den Top 8 sein!")
+                    else:
+                        data["pending_sprint"] = {
+                            "track": track_title,
+                            "results": sprint_picks,
+                        }
+                        save_data(data)
+                        st.success("Sprint gewertet! Jetzt Hauptrennen eintragen.")
+                        st.rerun()
 
-            st.markdown("---")
-            fl_pick = st.selectbox(
-                "🟣 Schnellste Rennrunde",
-                ["Keine"] + [d for d in full_results if d not in dnf_picks],
-            )
+        # SCHRITT B: HAUPTRENNEN ERFASSEN
+        else:
+            if is_sprint_weekend:
+                st.success("✅ Sprint gewertet! Jetzt das Hauptrennen erfassen:")
 
-            submit = st.form_submit_button(
-                "Grand Prix speichern & weiter",
-                type="primary",
-                use_container_width=True,
-            )
+            with st.form("full_grid_form"):
+                st.write("### 🏁 Hauptrennen: Zieldurchfahrt Platz 1 bis 22")
+                c1, c2, c3, c4 = st.columns(4)
+                full_results = []
 
-            if submit:
-                if len(set(full_results)) != 22:
-                    st.error(
-                        "Fehler: Jeder der 22 Plätze muss eindeutig belegt sein."
+                for i in range(1, 23):
+                    col = (
+                        c1
+                        if i <= 6
+                        else (c2 if i <= 12 else (c3 if i <= 18 else c4))
                     )
-                else:
-                    data["races"].append(
-                        {
-                            "track": current_track,
+                    with col:
+                        default_d = (
+                            "Lucas"
+                            if i == 1
+                            else (
+                                "Tim"
+                                if i == 2
+                                else all_drivers_list[(i - 1) % len(all_drivers_list)]
+                            )
+                        )
+                        idx = (
+                            all_drivers_list.index(default_d)
+                            if default_d in all_drivers_list
+                            else 0
+                        )
+                        picked = st.selectbox(
+                            f"Platz {i}",
+                            all_drivers_list,
+                            index=idx,
+                            key=f"grid_p_{i}",
+                        )
+                        full_results.append(picked)
+
+                st.markdown("---")
+                st.write("### Ausfälle")
+                dnf_picks = st.multiselect(
+                    "Fahrer auswählen, die nicht ins Ziel kamen (DNF):",
+                    all_drivers_list,
+                )
+
+                st.markdown("---")
+                fl_pick = st.selectbox(
+                    "🟣 Schnellste Rennrunde (Hauptrennen)",
+                    ["Keine"] + [d for d in full_results if d not in dnf_picks],
+                )
+
+                submit = st.form_submit_button(
+                    "💾 Grand Prix speichern & Weiter zum nächsten Event",
+                    type="primary",
+                    use_container_width=True,
+                )
+
+                if submit:
+                    if len(set(full_results)) != 22:
+                        st.error(
+                            "Fehler: Jeder der 22 Plätze muss eindeutig belegt sein."
+                        )
+                    else:
+                        race_entry = {
+                            "track": track_title,
                             "results": full_results,
                             "dnfs": dnf_picks,
                             "fastest_lap": fl_pick if fl_pick != "Keine" else None,
                             "driver_teams": dict(active_drivers),
                         }
-                    )
-                    save_data(data)
-                    st.rerun()
+
+                        # Sprint-Ergebnisse anheften, falls vorhanden
+                        if is_sprint_weekend and "pending_sprint" in data:
+                            race_entry["sprint_results"] = data["pending_sprint"]["results"]
+                            del data["pending_sprint"]
+
+                        data["races"].append(race_entry)
+                        save_data(data)
+                        st.success(f"{track_title} komplett gewertet!")
+                        st.rerun()
 
 # --- TAB 5: FAHRERMARKT ---
 with tab_market:
@@ -743,12 +831,31 @@ with tab_market:
 # --- TAB 6: KALENDER & HISTORIE ---
 with tab_history:
     st.subheader("Saisonkalender")
-    for idx, tr in enumerate(SEASON_2026_CALENDAR):
+    for idx, event in enumerate(SEASON_2026_CALENDAR):
+        tr = event["name"]
+        badge = " ⚡ [SPRINT]" if event["sprint"] else ""
+
         if idx < len(data["races"]):
             r = data["races"][idx]
+            sprint_info = ""
+            if r.get("sprint_results"):
+                sprint_info = f" | ⚡ Sprint-Sieger: {r['sprint_results'][0]}"
+
             with st.expander(
-                f"✅ {tr} — Sieger: 🏆 {r['results'][0]} (FL: {r.get('fastest_lap', '-')})"
+                f"✅ {tr}{badge} — Sieger: 🏆 {r['results'][0]} (FL: {r.get('fastest_lap', '-')}){sprint_info}"
             ):
+                if r.get("sprint_results"):
+                    st.write("**Sprint Top 8:**")
+                    sp_df = pd.DataFrame(
+                        {
+                            "Sprint-Platz": [f"P{n}" for n in range(1, 9)],
+                            "Fahrer": r["sprint_results"],
+                            "Punkte": [SPRINT_POINTS[n] for n in range(1, 9)],
+                        }
+                    )
+                    st.table(sp_df)
+
+                st.write("**Hauptrennen Klassement:**")
                 res_df = pd.DataFrame(
                     {
                         "Pos": [f"P{n}" for n in range(1, 23)],
@@ -765,4 +872,4 @@ with tab_history:
                     save_data(data)
                     st.rerun()
         else:
-            st.markdown(f"⚪ *{tr}* (Noch ausstehend)")
+            st.markdown(f"⚪ *{tr}{badge}* (Noch ausstehend)")
