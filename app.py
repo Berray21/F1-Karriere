@@ -434,27 +434,25 @@ with tab_tables:
         )
         st.table(styled_teams)
 
-# --- TAB 2: RENNERGEBNISSE ---
+# --- TAB 2: RENNERGEBNISSE (ALLE 24 RENNEN GARANTIERT) ---
 with tab_matrix:
     st.subheader("Rennergebnisse")
 
     top_10 = sorted_drivers[:10]
 
-    # Spaltenköpfe: Flagge + Sprint-Blitz
+    # Eindeutige Spaltenköpfe mit Renn-Nummer + Flagge (verhindert das Verschlucken doppelter Flaggen wie US/ES)
     cols = []
-    for ev in SEASON_2026_CALENDAR:
+    for idx, ev in enumerate(SEASON_2026_CALENDAR, start=1):
         flag = ev["name"].split()[0]
-        if ev["sprint"]:
-            cols.append(f"{flag}⚡")
-        else:
-            cols.append(flag)
+        sprint_mark = "⚡" if ev["sprint"] else ""
+        cols.append(f"{idx}.{flag}{sprint_mark}")
 
     rows = []
     for d in top_10:
         row = {"Fahrer": d}
-        for idx, col_name in enumerate(cols):
-            if idx < len(data["races"]):
-                r = data["races"][idx]
+        for r_idx, col_name in enumerate(cols):
+            if r_idx < len(data["races"]):
+                r = data["races"][r_idx]
                 dnfs = r.get("dnfs", [])
                 results = r.get("results", [])
                 fl = r.get("fastest_lap")
