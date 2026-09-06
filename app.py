@@ -487,6 +487,7 @@ with tab_matrix:
                 return "background-color: #1a1e26; color: #888888; text-align: center;"
             return "text-align: center;"
 
+      # Altes, veraltetes applymap:
         st.dataframe(
             df_matrix.style.applymap(color_cells),
             use_container_width=True,
