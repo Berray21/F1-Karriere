@@ -434,89 +434,128 @@ with tab_tables:
         )
         st.table(styled_teams)
 
-# --- TAB 2: RENNERGEBNISSE (REINES PYTHON / PANDAS - KEIN HTML) ---
+# --- TAB 2: RENNERGEBNISSE (PERFEKTE QUADRATE VIA STREAMLIT COLUMNS) ---
 with tab_matrix:
     st.subheader("Rennergebnisse")
 
     top_10 = sorted_drivers[:10]
 
-    # 24 Spaltennamen aufbauen
-    cols = []
-    for idx, ev in enumerate(SEASON_2026_CALENDAR, start=1):
+    # CSS für millimetergenau quadratische Kacheln (Höhe = Breite)
+    st.markdown(
+        """
+        <style>
+            .sq-box {
+                aspect-ratio: 1 / 1;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                margin: 1px 0;
+                user-select: none;
+            }
+            .sq-header {
+                font-size: 10px;
+                text-align: center;
+                margin-bottom: 4px;
+                line-height: 1.1;
+                color: #8c96a5;
+            }
+            .sq-driver {
+                font-size: 12px;
+                font-weight: bold;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                height: 100%;
+                display: flex;
+                align-items: center;
+            }
+        </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    # Hilfsfunktion zur Farbgebung der quadratischen Kachel
+    def render_square(driver, r_idx):
+        if r_idx >= len(data["races"]):
+            return '<div class="sq-box" style="background-color: #141822; color: #353d4f;">·</div>'
+
+        r = data["races"][r_idx]
+        dnfs = r.get("dnfs", [])
+        results = r.get("results", [])
+        fl = r.get("fastest_lap")
+
+        if driver in dnfs:
+            return '<div class="sq-box" style="background-color: #7a0909; color: #ffffff; font-size: 9px;">DNF</div>'
+
+        if driver in results:
+            pos = results.index(driver) + 1
+            border = (
+                "border: 2px solid #a855f7;"
+                if driver == fl
+                else "border: 1px solid rgba(255,255,255,0.05);"
+            )
+
+            if pos == 1:
+                bg, col = "#d4af37", "#000000"
+            elif pos == 2:
+                bg, col = "#b0b7bd", "#000000"
+            elif pos == 3:
+                bg, col = "#cd7f32", "#ffffff"
+            elif 4 <= pos <= 10:
+                bg, col = "#1e4d2b", "#81c784"
+            else:
+                bg, col = "#191e29", "#8c96a5"
+
+            return f'<div class="sq-box" style="background-color: {bg}; color: {col}; {border}">{pos}</div>'
+
+        return '<div class="sq-box" style="background-color: #141822; color: #353d4f;">-</div>'
+
+    # Spaltenaufteilung: 1 Spalte für Fahrernamen (Breite 2.2), danach 24 gleich breite Spalten (Breite je 1)
+    grid_cols = st.columns([2.2] + [1] * len(SEASON_2026_CALENDAR), gap="small")
+
+    # 1. KOPFZEILE (Flaggen & Renn-Nummern)
+    with grid_cols[0]:
+        st.markdown(
+            '<div style="font-size: 11px; font-weight: bold; color: #8c96a5; padding-top: 6px;">FAHRER</div>',
+            unsafe_allow_html=True,
+        )
+
+    for idx, ev in enumerate(SEASON_2026_CALENDAR):
         flag = ev["name"].split()[0]
         sprint_mark = "⚡" if ev["sprint"] else ""
-        cols.append(f"{idx}.{flag}{sprint_mark}")
+        with grid_cols[idx + 1]:
+            st.markdown(
+                f'<div class="sq-header">{idx + 1}<br>{flag}{sprint_mark}</div>',
+                unsafe_allow_html=True,
+            )
 
-    # Zeilendaten für Top 10 Fahrer erzeugen
-    rows = []
+    # 2. ZEILEN (Top 10 Fahrer & jeweils 24 quadratische Kacheln)
     for d in top_10:
-        row = {"Fahrer": d}
-        for r_idx, col_name in enumerate(cols):
-            if r_idx < len(data["races"]):
-                r = data["races"][r_idx]
-                dnfs = r.get("dnfs", [])
-                results = r.get("results", [])
-                fl = r.get("fastest_lap")
+        row_cols = st.columns(
+            [2.2] + [1] * len(SEASON_2026_CALENDAR), gap="small"
+        )
 
-                if d in dnfs:
-                    val = "DNF"
-                elif d in results:
-                    pos = results.index(d) + 1
-                    val = f"{pos} 🟣" if d == fl else str(pos)
-                else:
-                    val = "-"
-            else:
-                val = "·"
-            row[col_name] = val
-        rows.append(row)
+        # Fahrername ganz links
+        d_color = "#f1f1f1"
+        if d == "Lucas":
+            d_color = "#00d2be"
+        elif d == "Tim":
+            d_color = "#ff8700"
 
-    df_res = pd.DataFrame(rows).set_index("Fahrer")
+        with row_cols[0]:
+            st.markdown(
+                f'<div class="sq-driver" style="color: {d_color};">{d}</div>',
+                unsafe_allow_html=True,
+            )
 
-    # Styling-Funktion: Zentriert und gefärbt
-    def style_race_cells(val):
-        base_style = "text-align: center; font-weight: bold;"
-        if not isinstance(val, str) or val in ["·", "-"]:
-            return f"{base_style} color: #3e4756;"
-        if val == "DNF":
-            return f"{base_style} background-color: #7a0909; color: #ffffff;"
-        if "🟣" in val:
-            return f"{base_style} background-color: #6a1b9a; color: #ffffff;"
-        if val == "1":
-            return f"{base_style} background-color: #d4af37; color: #000000;"
-        if val == "2":
-            return f"{base_style} background-color: #b0b7bd; color: #000000;"
-        if val == "3":
-            return f"{base_style} background-color: #cd7f32; color: #ffffff;"
-        try:
-            p_num = int(val.split()[0])
-            if 4 <= p_num <= 10:
-                return (
-                    f"{base_style} background-color: #1e4d2b; color: #81c784;"
-                )
-        except ValueError:
-            pass
-        return f"{base_style} background-color: #1b202c; color: #8c96a5;"
-
-    # Sicher für alle Pandas-Versionen (.map / .applymap)
-    if hasattr(df_res.style, "map"):
-        styled_df = df_res.style.map(style_race_cells)
-    else:
-        styled_df = df_res.style.applymap(style_race_cells)
-
-    # Schmale Spaltenkonfiguration: jede Rennspalte auf 45px Breite begrenzen
-    col_configs = {
-        col: st.column_config.TextColumn(label=col, width=45) for col in cols
-    }
-    col_configs["Fahrer"] = st.column_config.TextColumn(
-        label="Fahrer", width="medium"
-    )
-
-    st.dataframe(
-        styled_df,
-        use_container_width=True,
-        column_config=col_configs,
-        height=390,
-    )
+        # Die 24 quadratischen Kacheln nebeneinander
+        for r_idx in range(len(SEASON_2026_CALENDAR)):
+            with row_cols[r_idx + 1]:
+                st.markdown(render_square(d, r_idx), unsafe_allow_html=True)
 # --- TAB 3: HEAD-TO-HEAD DUELL ---
 with tab_duel:
     l_team = active_drivers["Lucas"]
