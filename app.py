@@ -487,9 +487,14 @@ with tab_matrix:
                 return "background-color: #1a1e26; color: #888888; text-align: center;"
             return "text-align: center;"
 
-      # Altes, veraltetes applymap:
+     # Kompatibel mit allen Pandas-Versionen:
+        if hasattr(df_matrix.style, "map"):
+            styled_matrix = df_matrix.style.map(color_cells)
+        else:
+            styled_matrix = df_matrix.style.applymap(color_cells)
+
         st.dataframe(
-            df_matrix.style.applymap(color_cells),
+            styled_matrix,
             use_container_width=True,
             height=580,
         )
